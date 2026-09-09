@@ -1,0 +1,156 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # `secrets` is not allowed inside a step-level `if`, so expose a flag here.
+      HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-36 build-tools;36.0.0 platform-tools
+
+      # Pinned Gradle. The wrapper jar (binary) is not committed, so we install
+      # Gradle via setup-gradle and then generate the wrapper jar ourselves.
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.11.1"
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Generate Gradle wrapper jar
+        run: |
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            gradle wrapper --gradle-version 8.11.1 --distribution-type bin --no-daemon -q
+          fi
+          chmod +x gradlew
+          ./gradlew --version
+
+      # Bundled fonts are OFL-licensed and fetched at build time (keeps the
+      # repo binary-free). If this step fails the app still builds and falls
+      # back to system fonts at runtime.
+      - name: Fetch fonts (Literata, Inter, Noto Sans Myanmar)
+        continue-on-error: true
+        run: bash scripts/fetch-fonts.sh
+
+      - name: Decode keystore
+        if: env.HAS_KEYSTORE == 'true'
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/alal.jks
+
+      # ------------------------------------------------------------------
+      # 1) Compile first, on its own, so the REAL compiler / KSP error is
+      #    easy to find. Errors are copied to the job "Summary" tab.
+      # ------------------------------------------------------------------
+      - name: Compile (Kotlin + KSP)
+        id: compile
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew :app:compileDebugKotlin :app:compileDebugUnitTestKotlin \
+            --no-daemon --console=plain --warning-mode=none 2>&1 | tee compile.log
+
+      - name: Compile errors -> Summary
+        if: always()
+        run: |
+          {
+            echo "## Compile: ${{ steps.compile.outcome }}"
+            echo
+            echo '```'
+            grep -E '^e: |^error:|\[ksp\] |What went wrong|Caused by:|> Task .* FAILED|Execution failed' -A3 compile.log | head -300 \
+              || echo "(no error lines matched — open compile.log artifact)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.compile.outcome }}" != "success" ]; then
+            echo ""
+            echo "################ COMPILE ERRORS (copy these lines) ################"
+            grep -E '^e: |^error:|\[ksp\] |What went wrong|Caused by:|> Task .* FAILED' -A2 compile.log | head -120 \
+              || tail -n 80 compile.log
+            echo "###################################################################"
+            # Red annotations: show up at the top of the job page (mobile too).
+            grep -E '^e: |\[ksp\] .*error' compile.log | head -15 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            echo "::error::Kotlin compile failed - see the red lines above / Summary tab / build-logs artifact."
+            exit 1
+          fi
+
+      # ------------------------------------------------------------------
+      # 2) Unit tests. A failing test must NOT block the APK; the result is
+      #    reported in the Summary tab and the HTML report is uploaded.
+      # ------------------------------------------------------------------
+      - name: Unit tests
+        id: tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest --no-daemon --console=plain --warning-mode=none 2>&1 | tee test.log
+
+      - name: Test result -> Summary
+        if: always()
+        run: |
+          {
+            echo "## Unit tests: ${{ steps.tests.outcome }}"
+            echo
+            echo '```'
+            grep -E 'FAILED$|^e: |What went wrong|tests completed|Caused by:|AssertionError|ComparisonFailure' -A4 test.log | head -200 \
+              || echo "(no failure lines matched)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ------------------------------------------------------------------
+      # 3) Build the release APK.
+      # ------------------------------------------------------------------
+      - name: Assemble release
+        run: ./gradlew assembleRelease --no-daemon --console=plain --stacktrace
+        env:
+          KEYSTORE_PATH: alal.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Report APK size
+        run: ls -la app/build/outputs/apk/release/*.apk
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: alal-release
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: build-logs
+          path: |
+            compile.log
+            test.log
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+          if-no-files-found: ignore

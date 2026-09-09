@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Alal</string>
+
+    <!-- Navigation -->
+    <string name="tab_notes">Notes</string>
+    <string name="tab_stats">Stats</string>
+    <string name="tab_more">More</string>
+    <string name="write">Write</string>
+    <string name="search">Search</string>
+    <string name="back">Back</string>
+    <string name="more">More options</string>
+    <string name="close">Close</string>
+    <string name="done">Done</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="ok">OK</string>
+    <string name="clear">Clear</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="none">None</string>
+    <string name="custom">Custom</string>
+    <string name="all">All</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_new_note">New note</string>
+    <string name="shortcut_new_note_long">Start a new note</string>
+    <string name="shortcut_search">Search</string>
+    <string name="shortcut_search_long">Search notes</string>
+
+    <!-- Home -->
+    <string name="new_note">New note</string>
+    <string name="untitled">Untitled</string>
+    <string name="pinned">Pinned</string>
+    <string name="recent">Recent</string>
+    <string name="empty_title">Write your first note</string>
+    <string name="empty_body">Ideas, interviews, drafts — everything stays on this device.</string>
+    <string name="view_mode">View</string>
+    <string name="view_grid">Grid</string>
+    <string name="view_list">List</string>
+    <string name="view_compact">Compact</string>
+    <string name="sort">Sort</string>
+    <string name="sort_modified">Last modified</string>
+    <string name="sort_created">Date created</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_words">Word count</string>
+    <string name="select">Select</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="notes_count">%1$d notes</string>
+    <string name="meta_words">%1$s w</string>
+    <string name="theme_toggle">Toggle theme</string>
+
+    <!-- Actions -->
+    <string name="pin">Pin</string>
+    <string name="unpin">Unpin</string>
+    <string name="favorite">Favorite</string>
+    <string name="unfavorite">Remove favorite</string>
+    <string name="archive">Archive</string>
+    <string name="unarchive">Unarchive</string>
+    <string name="trash">Trash</string>
+    <string name="delete">Delete</string>
+    <string name="restore">Restore</string>
+    <string name="delete_forever">Delete forever</string>
+    <string name="empty_trash">Empty trash</string>
+    <string name="duplicate">Duplicate</string>
+    <string name="details">Details</string>
+    <string name="move_to">Move to</string>
+    <string name="change_status">Change status</string>
+    <string name="apply_template">Apply template</string>
+    <string name="add_tags">Tags</string>
+    <string name="reminder">Reminder</string>
+    <string name="lock">Lock</string>
+    <string name="export">Export</string>
+    <string name="share">Share</string>
+    <string name="reading_mode">Reading mode</string>
+    <string name="version_history">Version history</string>
+    <string name="outline">Outline</string>
+    <string name="snackbar_archived">Note archived</string>
+    <string name="snackbar_pinned">Note pinned</string>
+    <string name="snackbar_unpinned">Note unpinned</string>
+    <string name="snackbar_trashed">Moved to trash</string>
+    <string name="snackbar_restored">Note restored</string>
+    <string name="snackbar_duplicated">Note duplicated</string>
+    <string name="trash_hint">Notes in Trash are deleted forever after 30 days.</string>
+    <string name="empty_trash_confirm">Delete all notes in Trash forever?</string>
+    <string name="delete_forever_confirm">Delete this note forever? This cannot be undone.</string>
+    <string name="empty_list">Nothing here yet</string>
+
+    <!-- Categories / tags / status -->
+    <string name="category">Category</string>
+    <string name="categories">Categories</string>
+    <string name="add_category">Add category</string>
+    <string name="new_category">New category</string>
+    <string name="edit_category">Edit category</string>
+    <string name="delete_category">Delete category</string>
+    <string name="category_name">Category name</string>
+    <string name="no_category">No category</string>
+    <string name="color">Color</string>
+    <string name="tags">Tags</string>
+    <string name="add_tag">Add tag</string>
+    <string name="tag_name">Tag name</string>
+    <string name="status">Status</string>
+    <string name="status_idea">Idea</string>
+    <string name="status_research">Research</string>
+    <string name="status_draft">Draft</string>
+    <string name="status_editing">Editing</string>
+    <string name="status_submitted">Submitted</string>
+    <string name="status_published">Published</string>
+
+    <!-- Editor -->
+    <string name="title_hint">Title</string>
+    <string name="body_hint">Start writing…</string>
+    <string name="saved">Saved ✓</string>
+    <string name="focus_mode">Focus mode</string>
+    <string name="exit_focus">Exit focus mode</string>
+    <string name="typewriter_mode">Typewriter scrolling</string>
+    <string name="paragraph_focus">Paragraph focus</string>
+    <string name="text_settings">Text</string>
+    <string name="bold">Bold</string>
+    <string name="italic">Italic</string>
+    <string name="underline">Underline</string>
+    <string name="strikethrough">Strikethrough</string>
+    <string name="highlight">Highlight</string>
+    <string name="heading">Heading</string>
+    <string name="h1">Heading 1</string>
+    <string name="h2">Heading 2</string>
+    <string name="h3">Heading 3</string>
+    <string name="quote">Quote</string>
+    <string name="list">List</string>
+    <string name="bullet_list">Bullet list</string>
+    <string name="numbered_list">Numbered list</string>
+    <string name="checklist">Checklist</string>
+    <string name="link">Link</string>
+    <string name="insert_link">Insert link</string>
+    <string name="link_text">Text</string>
+    <string name="link_url">URL</string>
+    <string name="background">Background</string>
+    <string name="size_badge">%1$d sp</string>
+    <string name="note_details">Note details</string>
+    <string name="created">Created</string>
+    <string name="modified">Modified</string>
+
+    <!-- Find & replace -->
+    <string name="find_replace">Find &amp; replace</string>
+    <string name="find">Find</string>
+    <string name="replace">Replace</string>
+    <string name="replace_all">Replace all</string>
+    <string name="case_sensitive">Match case</string>
+    <string name="whole_word">Whole word</string>
+    <string name="regex">Regex</string>
+    <string name="no_matches">No matches</string>
+    <string name="match_count">%1$d/%2$d</string>
+    <string name="prev_match">Previous match</string>
+    <string name="next_match">Next match</string>
+    <string name="regex_error">Invalid pattern: %1$s</string>
+
+    <!-- Stats -->
+    <string name="stats">Statistics</string>
+    <string name="words">Words</string>
+    <string name="characters">Characters</string>
+    <string name="chars_no_spaces">Characters (no spaces)</string>
+    <string name="sentences">Sentences</string>
+    <string name="paragraphs">Paragraphs</string>
+    <string name="read_time">Read time</string>
+    <string name="min_read">%1$d min</string>
+    <string name="avg_words_sentence">Avg. words / sentence</string>
+    <string name="selection">Selection</string>
+    <string name="word_goal">Word goal</string>
+    <string name="goal">Goal</string>
+    <string name="no_goal">No goal</string>
+    <string name="goal_reached">Goal reached!</string>
+    <string name="progress_percent">%1$d%%</string>
+    <string name="total_words">Total words</string>
+    <string name="total_notes">Notes</string>
+    <string name="pipeline">Pipeline</string>
+
+    <!-- Text sheet -->
+    <string name="font_myanmar">Myanmar font</string>
+    <string name="font_latin">Latin font</string>
+    <string name="font_size">Body size</string>
+    <string name="line_height">Line height</string>
+    <string name="margin">Margin</string>
+    <string name="margin_narrow">Narrow</string>
+    <string name="margin_normal">Normal</string>
+    <string name="margin_wide">Wide</string>
+    <string name="title_size">Title size</string>
+    <string name="apply_this_note_only">Apply to this note only</string>
+    <string name="preview_text">The quick brown fox jumps over the lazy dog. မြန်မာစာ စမ်းသပ်စာသား။</string>
+    <string name="font_system">System</string>
+
+    <!-- Background sheet -->
+    <string name="paper_texture">Paper texture</string>
+    <string name="texture_plain">Plain</string>
+    <string name="texture_dotted">Dotted</string>
+    <string name="texture_lined">Lined</string>
+    <string name="texture_grid">Grid</string>
+    <string name="gradient">Gradient</string>
+    <string name="show_on_card">Show on card in Home</string>
+    <string name="hex_color">Hex color</string>
+
+    <!-- Templates -->
+    <string name="templates">Templates</string>
+    <string name="choose_template">Choose a template</string>
+    <string name="template_blank">Blank</string>
+    <string name="template_feature">Feature article</string>
+    <string name="template_interview">Interview</string>
+    <string name="template_research">Research</string>
+    <string name="template_idea">Idea</string>
+    <string name="built_in">Built-in</string>
+
+    <!-- Search -->
+    <string name="search_hint">Search notes</string>
+    <string name="recent_searches">Recent searches</string>
+    <string name="no_results">No results</string>
+    <string name="filter_category">Category</string>
+    <string name="filter_status">Status</string>
+    <string name="filter_tag">Tag</string>
+
+    <!-- More -->
+    <string name="favorites">Favorites</string>
+    <string name="backup_restore">Backup &amp; restore</string>
+    <string name="app_lock">App lock</string>
+    <string name="appearance">Appearance</string>
+    <string name="editor_settings">Editor</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="licenses">Open-source licenses</string>
+    <string name="about_body">Alal is a private, offline notebook for long-form writing in Burmese and English. No ads, no accounts, no tracking.</string>
+    <string name="licenses_body">Jetpack Compose, Material 3, Room, Hilt, DataStore, WorkManager (Apache 2.0). Fonts: Literata, Inter, Noto Sans Myanmar (SIL Open Font License 1.1).</string>
+
+    <!-- Appearance -->
+    <string name="theme">Theme</string>
+    <string name="follow_system">Follow system</string>
+    <string name="accent">Accent</string>
+    <string name="dynamic_color">Material You colors</string>
+    <string name="body_font">Body font</string>
+    <string name="title_font">Title font</string>
+    <string name="card_preview_size">Card preview size</string>
+    <string name="ui_density">Density</string>
+    <string name="density_compact">Compact</string>
+    <string name="density_default">Default</string>
+    <string name="density_comfortable">Comfortable</string>
+    <string name="card_style">Card style</string>
+    <string name="card_soft">Soft card</string>
+    <string name="card_divider">Divider only</string>
+    <string name="themed_icon">Themed icon</string>
+    <string name="themed_icon_hint">Uses your wallpaper colors on Android 13+</string>
+    <string name="theme_paper">Paper</string>
+    <string name="theme_white">White</string>
+    <string name="theme_sepia">Sepia</string>
+    <string name="theme_mint">Mint</string>
+    <string name="theme_sky">Sky</string>
+    <string name="theme_rose">Rose</string>
+    <string name="theme_ink">Ink</string>
+    <string name="theme_slate">Slate</string>
+    <string name="theme_forest">Forest</string>
+    <string name="theme_black">Black</string>
+    <string name="theme_system">System</string>
+
+    <!-- Editor settings -->
+    <string name="autosave_delay">Auto-save delay</string>
+    <string name="word_count_method">Word count method</string>
+    <string name="method_myanmar_syllable">Myanmar-aware (dictionary words)</string>
+    <string name="method_space_split">Split on spaces</string>
+    <string name="language">Language</string>
+    <string name="language_system">System default</string>
+    <string name="language_en">English</string>
+    <string name="language_my">မြန်မာ</string>
+    <string name="daily_goal">Daily word goal</string>
+    <string name="milliseconds">%1$d ms</string>
+
+    <!-- ===== Phase 2: Backup & Restore ===== -->
+    <string name="backup_title">Backup &amp; Restore</string>
+    <string name="backup_intro">Alal never uses the internet. Backups are plain .alal files (JSON) that you keep yourself — in your Downloads folder, Google Drive, Gmail, or anywhere else you choose.</string>
+    <string name="backup_last">Last backup: %1$s</string>
+    <string name="backup_save_file">Save backup file…</string>
+    <string name="backup_share">Share backup…</string>
+    <string name="backup_share_hint">Send the backup to Drive, Gmail, Telegram or any app on your phone.</string>
+    <string name="backup_share_subject">Alal notes backup</string>
+    <string name="backup_saved">Backup saved</string>
+    <string name="backup_failed">Backup failed</string>
+    <string name="auto_backup_title">Automatic backup</string>
+    <string name="auto_backup_daily">Back up daily to a folder</string>
+    <string name="auto_backup_pick_hint">Pick a folder — for example a Google Drive folder — and Alal writes a fresh backup there once a day, keeping the last 7.</string>
+    <string name="auto_backup_change_folder">Change folder</string>
+    <string name="auto_backup_now">Back up now</string>
+    <string name="auto_backup_hint">Runs in the background even when Alal is closed. Only the newest 7 files are kept.</string>
+    <string name="auto_backup_on">Automatic backup turned on</string>
+    <string name="auto_backup_off">Automatic backup turned off</string>
+    <string name="auto_backup_folder_lost">The backup folder is no longer accessible. Pick it again.</string>
+    <string name="restore_title">Restore</string>
+    <string name="restore_hint">Open an .alal file. You can merge it with your current notes or replace everything.</string>
+    <string name="restore_pick_file">Open backup file…</string>
+    <string name="restore_confirm_title">Restore from backup?</string>
+    <string name="restore_file_date">Created %1$s</string>
+    <string name="restore_file_summary">%1$d notes · %2$d in trash · %3$d categories · %4$d tags</string>
+    <string name="restore_mode_merge">Merge</string>
+    <string name="restore_mode_merge_hint">Keep current notes and add the ones from the file. Duplicates are skipped.</string>
+    <string name="restore_mode_replace">Replace everything</string>
+    <string name="restore_mode_replace_hint">Delete all current notes first, then restore the file. Cannot be undone.</string>
+    <string name="restore_apply_settings">Also restore appearance &amp; editor settings</string>
+    <string name="restore_action">Restore</string>
+    <string name="restore_done">Restored</string>
+    <string name="restore_failed">Restore failed</string>
+    <string name="restore_invalid_file">This is not a valid Alal backup file</string>
+
+    <!-- ===== Phase 2: Stats ===== -->
+    <string name="stats_today">Today</string>
+    <string name="stats_streak">Streak</string>
+    <string name="stats_days">%1$d days</string>
+    <string name="stats_goal_progress">%1$s / %2$s words</string>
+    <string name="stats_goal_reached">Daily goal reached</string>
+    <string name="stats_last_14_days">Last 14 days</string>
+    <string name="stats_best_day">Best day: %1$s words</string>
+    <string name="stats_by_status">By status</string>
+    <string name="stats_by_category">By category</string>
+    <string name="stats_uncategorized">Uncategorised</string>
+    <string name="stats_longest_note">Longest note</string>
+    <string name="stats_words_chars">%1$s words · %2$s characters</string>
+    <string name="stats_total_chars">%1$s characters</string>
+    <string name="stats_count_words">%1$d · %2$s words</string>
+
+    <!-- ===== Phase 2: Reminder ===== -->
+    <string name="reminder_set">Reminder set</string>
+    <string name="reminder_removed">Reminder removed</string>
+    <string name="reminder_permission_denied">Notifications are off. Allow them in system settings to get reminders.</string>
+    <string name="reminder_current">Current: %1$s</string>
+    <string name="reminder_in_1h">In 1 hour</string>
+    <string name="reminder_in_3h">In 3 hours</string>
+    <string name="reminder_tonight">Tonight 20:00</string>
+    <string name="reminder_tomorrow_morning">Tomorrow 09:00</string>
+    <string name="reminder_next_week">Next week</string>
+    <string name="reminder_in_past">That time has already passed</string>
+    <string name="reminder_set_action">Set reminder</string>
+    <string name="reminder_remove">Remove</string>
+    <string name="notif_channel_reminders">Note reminders</string>
+    <string name="notif_channel_reminders_desc">Reminders you set on individual notes</string>
+
+    <!-- ===== Phase 2: Lock ===== -->
+    <string name="unlock">Unlock</string>
+    <string name="locked_note">Locked note</string>
+    <string name="locked_preview">Locked — unlock to read</string>
+    <string name="lock_intro">Protect the whole app, or only chosen notes, with a PIN. Fingerprint or face unlock can be used when your phone supports it.</string>
+    <string name="lock_pin_section">PIN</string>
+    <string name="lock_set_pin">Set a PIN</string>
+    <string name="lock_enabled">Lock the whole app</string>
+    <string name="lock_enabled_hint">Ask for the PIN when Alal opens. Off = only locked notes ask.</string>
+    <string name="lock_change_pin">Change PIN</string>
+    <string name="lock_remove_pin">Remove PIN &amp; unlock all notes</string>
+    <string name="lock_options">Options</string>
+    <string name="lock_biometric">Fingerprint / face unlock</string>
+    <string name="lock_biometric_hint">Use your device biometrics instead of typing the PIN.</string>
+    <string name="lock_biometric_unavailable">Not available on this device</string>
+    <string name="lock_biometric_subtitle">Unlock Alal</string>
+    <string name="lock_timeout">Lock again after leaving the app</string>
+    <string name="lock_timeout_immediately">Immediately</string>
+    <string name="lock_timeout_seconds">%1$d seconds</string>
+    <string name="lock_timeout_minutes">%1$d min</string>
+    <string name="lock_notes_section">Locked notes</string>
+    <string name="lock_notes_hint">Lock a single note from the editor menu. Locked notes hide their text on cards, in search and in reminders. The PIN is never included in backups. If you forget it, clear the app data — your notes will be lost, so keep a backup.</string>
+    <string name="lock_setup_first">Set a PIN first in More → App lock</string>
+    <string name="lock_enter_pin">Enter your PIN</string>
+    <string name="lock_enter_current_pin">Enter current PIN</string>
+    <string name="lock_enter_new_pin">Enter new PIN</string>
+    <string name="lock_confirm_new_pin">Re-enter new PIN</string>
+    <string name="pin_length_hint">%1$d–%2$d digits</string>
+    <string name="pin_wrong">Wrong PIN</string>
+    <string name="pin_too_short">PIN is too short</string>
+    <string name="pin_mismatch">PINs do not match — try again</string>
+    <string name="pin_too_many">Too many attempts. Wait 30 seconds.</string>
+
+    <!-- ===== Phase 2: Version history ===== -->
+    <string name="versions_intro">Alal keeps up to %1$d snapshots per note — one every 10 minutes of editing, or whenever a large change happens.</string>
+    <string name="versions_empty_title">No versions yet</string>
+    <string name="versions_empty_body">Snapshots appear here as you keep writing. Tap + to save one now.</string>
+    <string name="version_save_now">Save snapshot now</string>
+    <string name="version_saved">Snapshot saved</string>
+    <string name="version_restore">Restore this version</string>
+    <string name="version_restored">Version restored — the previous text was saved as a snapshot</string>
+    <string name="versions_clear">Delete all versions</string>
+    <string name="versions_clear_confirm">Delete every saved version of this note? The note itself is not affected.</string>
+    <string name="versions_cleared">Versions deleted</string>
+
+    <!-- Phase 2.1: export / outline / reading -->
+    <string name="export_format">Format</string>
+    <string name="export_markdown">Markdown</string>
+    <string name="export_markdown_hint">Keeps headings, bold, lists — opens in any text editor</string>
+    <string name="export_plain">Plain text</string>
+    <string name="export_plain_hint">Formatting marks removed</string>
+    <string name="export_pdf">PDF</string>
+    <string name="export_pdf_hint">A4 pages with your Myanmar font, ready to send</string>
+    <string name="export_save_file">Save file</string>
+    <string name="export_hint">Save file lets you pick a folder (including Google Drive). Share sends it straight to Gmail, Telegram, Viber or any other app.</string>
+    <string name="export_saved">Exported</string>
+    <string name="export_failed">Export failed</string>
+    <string name="outline_empty">Nothing to navigate yet. Add headings (# Title) or paragraphs and they will appear here.</string>
+    <string name="outline_hint_headings">%1$d headings — tap to jump</string>
+    <string name="outline_hint_paragraphs">No headings; showing %1$d paragraphs — tap to jump</string>
+    <string name="reading_smaller">Smaller text</string>
+    <string name="reading_larger">Larger text</string>
+</resources>

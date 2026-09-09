@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/build/
+*.jks
+*.keystore
+!gradle/wrapper/gradle-wrapper.jar
+# Latin fonts (Literata, Inter) are fetched by scripts/fetch-fonts.sh in CI (see README).
+# Burmese fonts (Pyidaungsu, Noto Sans Myanmar) are committed.
+app/src/main/res/font/literata.ttf
+app/src/main/res/font/inter.ttf

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base app theme. Compose draws everything; this only exists so
+         AppCompatActivity (per-app locales) and the system bars are happy. -->
+    <style name="Theme.Alal" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/paper_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+    </style>
+
+    <style name="Theme.Alal.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/paper_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <!-- Black disc behind the wordmark so the paper-white letters are visible on any splash background -->
+        <item name="windowSplashScreenIconBackgroundColor">#000000</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="postSplashScreenTheme">@style/Theme.Alal</item>
+    </style>
+</resources>

@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Alal</string>
+
+    <!-- Navigation -->
+    <string name="tab_notes">မှတ်စုများ</string>
+    <string name="tab_stats">စာရင်းအင်း</string>
+    <string name="tab_more">နောက်ထပ်</string>
+    <string name="write">ရေးမည်</string>
+    <string name="search">ရှာဖွေ</string>
+    <string name="back">နောက်သို့</string>
+    <string name="more">နောက်ထပ် ရွေးချယ်စရာများ</string>
+    <string name="close">ပိတ်</string>
+    <string name="done">ပြီးပြီ</string>
+    <string name="cancel">မလုပ်တော့</string>
+    <string name="save">သိမ်း</string>
+    <string name="ok">အိုကေ</string>
+    <string name="clear">ရှင်းလင်း</string>
+    <string name="undo">နောက်ပြန်</string>
+    <string name="redo">ရှေ့ပြန်</string>
+    <string name="coming_soon">မကြာမီ လာမည်</string>
+    <string name="none">မရှိ</string>
+    <string name="custom">စိတ်ကြိုက်</string>
+    <string name="all">အားလုံး</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_new_note">မှတ်စုအသစ်</string>
+    <string name="shortcut_new_note_long">မှတ်စုအသစ် စရေးမည်</string>
+    <string name="shortcut_search">ရှာဖွေ</string>
+    <string name="shortcut_search_long">မှတ်စုများ ရှာဖွေမည်</string>
+
+    <!-- Home -->
+    <string name="new_note">မှတ်စုအသစ်</string>
+    <string name="untitled">ခေါင်းစဉ်မဲ့</string>
+    <string name="pinned">ပင်ထားသော</string>
+    <string name="recent">မကြာသေးမီ</string>
+    <string name="empty_title">ပထမဆုံး မှတ်စု စရေးလိုက်ပါ</string>
+    <string name="empty_body">အိုင်ဒီယာ၊ အင်တာဗျူး၊ မူကြမ်း — အားလုံး ဒီစက်ထဲမှာပဲ ရှိနေပါမည်။</string>
+    <string name="view_mode">ပြသပုံစံ</string>
+    <string name="view_grid">ဂရစ်</string>
+    <string name="view_list">စာရင်း</string>
+    <string name="view_compact">ကျစ်လျစ်</string>
+    <string name="sort">စီစဥ်</string>
+    <string name="sort_modified">နောက်ဆုံး ပြင်ခဲ့သည့်အချိန်</string>
+    <string name="sort_created">ဖန်တီးသည့်ရက်</string>
+    <string name="sort_title">ခေါင်းစဉ်</string>
+    <string name="sort_words">စာလုံးအရေအတွက်</string>
+    <string name="select">ရွေးမည်</string>
+    <string name="selected_count">%1$d ခု ရွေးထားသည်</string>
+    <string name="notes_count">မှတ်စု %1$d ခု</string>
+    <string name="meta_words">%1$s လုံး</string>
+    <string name="theme_toggle">အသွင်အပြင် ပြောင်း</string>
+
+    <!-- Actions -->
+    <string name="pin">ပင်</string>
+    <string name="unpin">ပင်ဖြုတ်</string>
+    <string name="favorite">အကြိုက်</string>
+    <string name="unfavorite">အကြိုက်မှ ဖယ်</string>
+    <string name="archive">သိမ်းဆည်း</string>
+    <string name="unarchive">သိမ်းဆည်းမှ ပြန်ထုတ်</string>
+    <string name="trash">အမှိုက်ပုံး</string>
+    <string name="delete">ဖျက်</string>
+    <string name="restore">ပြန်ယူ</string>
+    <string name="delete_forever">အပြီးဖျက်</string>
+    <string name="empty_trash">အမှိုက်ပုံး ရှင်း</string>
+    <string name="duplicate">ပွား</string>
+    <string name="details">အသေးစိတ်</string>
+    <string name="move_to">ရွှေ့ရန်</string>
+    <string name="change_status">အခြေအနေ ပြောင်း</string>
+    <string name="apply_template">ပုံစံခွက် သုံး</string>
+    <string name="add_tags">တက်ဂ်များ</string>
+    <string name="reminder">သတိပေးချက်</string>
+    <string name="lock">လော့ခ်</string>
+    <string name="export">ထုတ်ယူ</string>
+    <string name="share">မျှဝေ</string>
+    <string name="reading_mode">ဖတ်ရှုမုဒ်</string>
+    <string name="version_history">မူကွဲ မှတ်တမ်း</string>
+    <string name="outline">အကြမ်းဖျင်း</string>
+    <string name="snackbar_archived">မှတ်စုကို သိမ်းဆည်းလိုက်ပြီ</string>
+    <string name="snackbar_pinned">မှတ်စုကို ပင်လိုက်ပြီ</string>
+    <string name="snackbar_unpinned">ပင်ဖြုတ်လိုက်ပြီ</string>
+    <string name="snackbar_trashed">အမှိုက်ပုံးထဲ ရွှေ့လိုက်ပြီ</string>
+    <string name="snackbar_restored">မှတ်စုကို ပြန်ယူလိုက်ပြီ</string>
+    <string name="snackbar_duplicated">မှတ်စုကို ပွားလိုက်ပြီ</string>
+    <string name="trash_hint">အမှိုက်ပုံးထဲရှိ မှတ်စုများကို ရက် ၃၀ အကြာတွင် အပြီးဖျက်ပါမည်။</string>
+    <string name="empty_trash_confirm">အမှိုက်ပုံးထဲရှိ မှတ်စုအားလုံးကို အပြီးဖျက်မလား?</string>
+    <string name="delete_forever_confirm">ဒီမှတ်စုကို အပြီးဖျက်မလား? ပြန်ယူ၍ မရပါ။</string>
+    <string name="empty_list">ဘာမှ မရှိသေးပါ</string>
+
+    <!-- Categories / tags / status -->
+    <string name="category">အမျိုးအစား</string>
+    <string name="categories">အမျိုးအစားများ</string>
+    <string name="add_category">အမျိုးအစား ထည့်</string>
+    <string name="new_category">အမျိုးအစား အသစ်</string>
+    <string name="edit_category">အမျိုးအစား ပြင်</string>
+    <string name="delete_category">အမျိုးအစား ဖျက်</string>
+    <string name="category_name">အမျိုးအစား အမည်</string>
+    <string name="no_category">အမျိုးအစား မရှိ</string>
+    <string name="color">အရောင်</string>
+    <string name="tags">တက်ဂ်များ</string>
+    <string name="add_tag">တက်ဂ် ထည့်</string>
+    <string name="tag_name">တက်ဂ် အမည်</string>
+    <string name="status">အခြေအနေ</string>
+    <string name="status_idea">အိုင်ဒီယာ</string>
+    <string name="status_research">သုတေသန</string>
+    <string name="status_draft">မူကြမ်း</string>
+    <string name="status_editing">တည်းဖြတ်ဆဲ</string>
+    <string name="status_submitted">တင်ပြပြီး</string>
+    <string name="status_published">ထုတ်ဝေပြီး</string>
+
+    <!-- Editor -->
+    <string name="title_hint">ခေါင်းစဉ်</string>
+    <string name="body_hint">စရေးလိုက်ပါ…</string>
+    <string name="saved">သိမ်းပြီး ✓</string>
+    <string name="focus_mode">အာရုံစူးစိုက် မုဒ်</string>
+    <string name="exit_focus">အာရုံစူးစိုက် မုဒ်မှ ထွက်</string>
+    <string name="typewriter_mode">လက်နှိပ်စက်ပုံစံ ရွှေ့ခြင်း</string>
+    <string name="paragraph_focus">စာပိုဒ် အာရုံစူးစိုက်</string>
+    <string name="text_settings">စာသား</string>
+    <string name="bold">စာလုံးမ</string>
+    <string name="italic">စာလုံးစောင်း</string>
+    <string name="underline">အောက်မျဉ်း</string>
+    <string name="strikethrough">ဖြတ်မျဉ်း</string>
+    <string name="highlight">အရောင်ခြယ်</string>
+    <string name="heading">ခေါင်းစီး</string>
+    <string name="h1">ခေါင်းစီး ၁</string>
+    <string name="h2">ခေါင်းစီး ၂</string>
+    <string name="h3">ခေါင်းစီး ၃</string>
+    <string name="quote">ကိုးကားချက်</string>
+    <string name="list">စာရင်း</string>
+    <string name="bullet_list">အစက် စာရင်း</string>
+    <string name="numbered_list">နံပါတ် စာရင်း</string>
+    <string name="checklist">အမှန်ခြစ် စာရင်း</string>
+    <string name="link">လင့်ခ်</string>
+    <string name="insert_link">လင့်ခ် ထည့်</string>
+    <string name="link_text">စာသား</string>
+    <string name="link_url">URL</string>
+    <string name="background">နောက်ခံ</string>
+    <string name="size_badge">%1$d sp</string>
+    <string name="note_details">မှတ်စု အသေးစိတ်</string>
+    <string name="created">ဖန်တီးသည့်အချိန်</string>
+    <string name="modified">ပြင်ဆင်သည့်အချိန်</string>
+
+    <!-- Find & replace -->
+    <string name="find_replace">ရှာ &amp; အစားထိုး</string>
+    <string name="find">ရှာ</string>
+    <string name="replace">အစားထိုး</string>
+    <string name="replace_all">အားလုံး အစားထိုး</string>
+    <string name="case_sensitive">အကြီးအသေး ခွဲ</string>
+    <string name="whole_word">စာလုံးအပြည့်</string>
+    <string name="regex">Regex</string>
+    <string name="no_matches">မတွေ့ပါ</string>
+    <string name="match_count">%1$d/%2$d</string>
+    <string name="prev_match">ယခင်</string>
+    <string name="next_match">နောက်</string>
+    <string name="regex_error">ပုံစံ မမှန်ပါ: %1$s</string>
+
+    <!-- Stats -->
+    <string name="stats">စာရင်းအင်း</string>
+    <string name="words">စာလုံး</string>
+    <string name="characters">အက္ခရာ</string>
+    <string name="chars_no_spaces">အက္ခရာ (နေရာလပ် မပါ)</string>
+    <string name="sentences">ဝါကျ</string>
+    <string name="paragraphs">စာပိုဒ်</string>
+    <string name="read_time">ဖတ်ချိန်</string>
+    <string name="min_read">%1$d မိနစ်</string>
+    <string name="avg_words_sentence">ဝါကျတစ်ခုလျှင် ပျမ်းမျှစာလုံး</string>
+    <string name="selection">ရွေးထားသောစာ</string>
+    <string name="word_goal">စာလုံး ပန်းတိုင်</string>
+    <string name="goal">ပန်းတိုင်</string>
+    <string name="no_goal">ပန်းတိုင် မရှိ</string>
+    <string name="goal_reached">ပန်းတိုင် ရောက်ပြီ!</string>
+    <string name="progress_percent">%1$d%%</string>
+    <string name="total_words">စုစုပေါင်း စာလုံး</string>
+    <string name="total_notes">မှတ်စုများ</string>
+    <string name="pipeline">လုပ်ငန်း အဆင့်များ</string>
+
+    <!-- Text sheet -->
+    <string name="font_myanmar">မြန်မာ ဖောင့်</string>
+    <string name="font_latin">လက်တင် ဖောင့်</string>
+    <string name="font_size">စာကိုယ် အရွယ်</string>
+    <string name="line_height">လိုင်း အမြင့်</string>
+    <string name="margin">ဘေးကွက်လပ်</string>
+    <string name="margin_narrow">ကျဉ်း</string>
+    <string name="margin_normal">ပုံမှန်</string>
+    <string name="margin_wide">ကျယ်</string>
+    <string name="title_size">ခေါင်းစဉ် အရွယ်</string>
+    <string name="apply_this_note_only">ဒီမှတ်စုတွင်သာ သုံး</string>
+    <string name="preview_text">The quick brown fox jumps over the lazy dog. မြန်မာစာ စမ်းသပ်စာသား။</string>
+    <string name="font_system">စနစ်</string>
+
+    <!-- Background sheet -->
+    <string name="paper_texture">စက္ကူ အသွင်</string>
+    <string name="texture_plain">ရိုးရိုး</string>
+    <string name="texture_dotted">အစက်</string>
+    <string name="texture_lined">မျဉ်းကြောင်း</string>
+    <string name="texture_grid">ဇယားကွက်</string>
+    <string name="gradient">အရောင်စဉ်</string>
+    <string name="show_on_card">ပင်မစာမျက်နှာ ကတ်တွင် ပြ</string>
+    <string name="hex_color">Hex အရောင်</string>
+
+    <!-- Templates -->
+    <string name="templates">ပုံစံခွက်များ</string>
+    <string name="choose_template">ပုံစံခွက် ရွေးပါ</string>
+    <string name="template_blank">အလွတ်</string>
+    <string name="template_feature">ဖီချာ ဆောင်းပါး</string>
+    <string name="template_interview">အင်တာဗျူး</string>
+    <string name="template_research">သုတေသန</string>
+    <string name="template_idea">အိုင်ဒီယာ</string>
+    <string name="built_in">ပါဝင်ပြီး</string>
+
+    <!-- Search -->
+    <string name="search_hint">မှတ်စုများ ရှာဖွေ</string>
+    <string name="recent_searches">မကြာသေးမီ ရှာဖွေမှုများ</string>
+    <string name="no_results">ရလဒ် မရှိပါ</string>
+    <string name="filter_category">အမျိုးအစား</string>
+    <string name="filter_status">အခြေအနေ</string>
+    <string name="filter_tag">တက်ဂ်</string>
+
+    <!-- More -->
+    <string name="favorites">အကြိုက်များ</string>
+    <string name="backup_restore">အရန်သိမ်း &amp; ပြန်ယူ</string>
+    <string name="app_lock">အက်ပ် လော့ခ်</string>
+    <string name="appearance">အသွင်အပြင်</string>
+    <string name="editor_settings">အယ်ဒီတာ</string>
+    <string name="settings">ဆက်တင်များ</string>
+    <string name="about">အကြောင်း</string>
+    <string name="version">ဗားရှင်း</string>
+    <string name="licenses">Open-source လိုင်စင်များ</string>
+    <string name="about_body">Alal သည် မြန်မာနှင့် အင်္ဂလိပ် ဘာသာဖြင့် စာရှည် ရေးသားရန် ကိုယ်ပိုင်၊ အော့ဖ်လိုင်း မှတ်စုစာအုပ် ဖြစ်သည်။ ကြော်ငြာ မရှိ၊ အကောင့် မလို၊ ခြေရာခံခြင်း မရှိပါ။</string>
+    <string name="licenses_body">Jetpack Compose, Material 3, Room, Hilt, DataStore, WorkManager (Apache 2.0)။ ဖောင့်များ: Literata, Inter, Noto Sans Myanmar (SIL Open Font License 1.1)။</string>
+
+    <!-- Appearance -->
+    <string name="theme">အသွင်အပြင်</string>
+    <string name="follow_system">စနစ်အတိုင်း</string>
+    <string name="accent">အရောင်ဆန့်</string>
+    <string name="dynamic_color">Material You အရောင်များ</string>
+    <string name="body_font">စာကိုယ် ဖောင့်</string>
+    <string name="title_font">ခေါင်းစဉ် ဖောင့်</string>
+    <string name="card_preview_size">ကတ် အစမ်းပြ အရွယ်</string>
+    <string name="ui_density">သိပ်သည်းမှု</string>
+    <string name="density_compact">ကျစ်လျစ်</string>
+    <string name="density_default">ပုံမှန်</string>
+    <string name="density_comfortable">သက်တောင့်သက်သာ</string>
+    <string name="card_style">ကတ် ပုံစံ</string>
+    <string name="card_soft">နူးညံ့ ကတ်</string>
+    <string name="card_divider">မျဉ်းသာ</string>
+    <string name="themed_icon">အသွင်အပြင်ညီ အိုင်ကွန်</string>
+    <string name="themed_icon_hint">Android 13+ တွင် သင့် နောက်ခံအရောင်များကို သုံးသည်</string>
+    <string name="theme_paper">စက္ကူ</string>
+    <string name="theme_white">အဖြူ</string>
+    <string name="theme_sepia">ဆီပီယာ</string>
+    <string name="theme_mint">မင့်</string>
+    <string name="theme_sky">ကောင်းကင်</string>
+    <string name="theme_rose">နှင်းဆီ</string>
+    <string name="theme_ink">မှင်</string>
+    <string name="theme_slate">ကျောက်ပြား</string>
+    <string name="theme_forest">သစ်တော</string>
+    <string name="theme_black">အမည်း</string>
+    <string name="theme_system">စနစ်</string>
+
+    <!-- Editor settings -->
+    <string name="autosave_delay">အလိုအလျောက် သိမ်းရန် ကြာချိန်</string>
+    <string name="word_count_method">စာလုံး ရေတွက်နည်း</string>
+    <string name="method_myanmar_syllable">မြန်မာ (အဘိဓာန်အခြေပြု စကားလုံး)</string>
+    <string name="method_space_split">နေရာလပ်ဖြင့် ခွဲ</string>
+    <string name="language">ဘာသာစကား</string>
+    <string name="language_system">စနစ်အတိုင်း</string>
+    <string name="language_en">English</string>
+    <string name="language_my">မြန်မာ</string>
+    <string name="daily_goal">နေ့စဉ် စာလုံး ပန်းတိုင်</string>
+    <string name="milliseconds">%1$d ms</string>
+
+    <!-- ===== Phase 2: Backup & Restore ===== -->
+    <string name="backup_title">အရန်သိမ်း &amp; ပြန်ယူ</string>
+    <string name="backup_intro">Alal က အင်တာနက် လုံးဝ မသုံးပါ။ အရန်ဖိုင်များက .alal (JSON) ဖိုင်ရိုးရိုးဖြစ်ပြီး Downloads ဖိုလ်ဒါ၊ Google Drive၊ Gmail စသည့် ကြိုက်ရာနေရာမှာ ကိုယ်တိုင် သိမ်းထားနိုင်ပါတယ်။</string>
+    <string name="backup_last">နောက်ဆုံး အရန်သိမ်းချိန် — %1$s</string>
+    <string name="backup_save_file">အရန်ဖိုင် သိမ်းမယ်…</string>
+    <string name="backup_share">အရန်ဖိုင် ပေးပို့မယ်…</string>
+    <string name="backup_share_hint">Drive၊ Gmail၊ Telegram စသည့် ဖုန်းထဲရှိ မည်သည့် app ကိုမဆို ပေးပို့နိုင်ပါတယ်။</string>
+    <string name="backup_share_subject">Alal မှတ်စု အရန်ဖိုင်</string>
+    <string name="backup_saved">အရန်ဖိုင် သိမ်းပြီးပါပြီ</string>
+    <string name="backup_failed">အရန်သိမ်းခြင်း မအောင်မြင်ပါ</string>
+    <string name="auto_backup_title">အလိုအလျောက် အရန်သိမ်းခြင်း</string>
+    <string name="auto_backup_daily">ဖိုလ်ဒါတစ်ခုသို့ နေ့စဉ် အရန်သိမ်းမယ်</string>
+    <string name="auto_backup_pick_hint">ဖိုလ်ဒါတစ်ခု (ဥပမာ Google Drive ဖိုလ်ဒါ) ရွေးပါ။ Alal က တစ်နေ့တစ်ခါ အရန်ဖိုင်အသစ် ရေးပေးပြီး နောက်ဆုံး ၇ ဖိုင်ကို သိမ်းထားပါမယ်။</string>
+    <string name="auto_backup_change_folder">ဖိုလ်ဒါ ပြောင်းမယ်</string>
+    <string name="auto_backup_now">အခု အရန်သိမ်းမယ်</string>
+    <string name="auto_backup_hint">Alal ပိတ်ထားချိန်မှာလည်း နောက်ကွယ်မှ အလုပ်လုပ်ပါတယ်။ နောက်ဆုံး ၇ ဖိုင်သာ ကျန်ပါမယ်။</string>
+    <string name="auto_backup_on">အလိုအလျောက် အရန်သိမ်းခြင်း ဖွင့်ပြီး</string>
+    <string name="auto_backup_off">အလိုအလျောက် အရန်သိမ်းခြင်း ပိတ်ပြီး</string>
+    <string name="auto_backup_folder_lost">အရန်ဖိုလ်ဒါကို ဆက်သုံးခွင့် မရတော့ပါ။ ပြန်ရွေးပေးပါ။</string>
+    <string name="restore_title">ပြန်ယူခြင်း</string>
+    <string name="restore_hint">.alal ဖိုင်တစ်ခု ဖွင့်ပါ။ လက်ရှိမှတ်စုများနှင့် ပေါင်းထည့်နိုင် (သို့) အကုန် အစားထိုးနိုင်ပါတယ်။</string>
+    <string name="restore_pick_file">အရန်ဖိုင် ဖွင့်မယ်…</string>
+    <string name="restore_confirm_title">အရန်ဖိုင်မှ ပြန်ယူမလား?</string>
+    <string name="restore_file_date">ဖန်တီးချိန် %1$s</string>
+    <string name="restore_file_summary">မှတ်စု %1$d · အမှိုက်ပုံး %2$d · အမျိုးအစား %3$d · တဂ် %4$d</string>
+    <string name="restore_mode_merge">ပေါင်းထည့်</string>
+    <string name="restore_mode_merge_hint">လက်ရှိမှတ်စုများ ထားပြီး ဖိုင်ထဲကဟာ ထပ်ထည့်မယ်။ ထပ်နေသည်များကို ကျော်သွားပါမယ်။</string>
+    <string name="restore_mode_replace">အကုန် အစားထိုး</string>
+    <string name="restore_mode_replace_hint">လက်ရှိမှတ်စုအားလုံး အရင်ဖျက်ပြီး ဖိုင်ထဲကဟာ ပြန်ယူမယ်။ နောက်ပြန်လှန်လို့ မရပါ။</string>
+    <string name="restore_apply_settings">အသွင်အပြင် &amp; အယ်ဒီတာ ဆက်တင်များပါ ပြန်ယူမယ်</string>
+    <string name="restore_action">ပြန်ယူ</string>
+    <string name="restore_done">ပြန်ယူပြီးပါပြီ</string>
+    <string name="restore_failed">ပြန်ယူခြင်း မအောင်မြင်ပါ</string>
+    <string name="restore_invalid_file">ဤဖိုင်က Alal အရန်ဖိုင် မဟုတ်ပါ</string>
+
+    <!-- ===== Phase 2: Stats ===== -->
+    <string name="stats_today">ယနေ့</string>
+    <string name="stats_streak">ဆက်တိုက်ရေးရက်</string>
+    <string name="stats_days">%1$d ရက်</string>
+    <string name="stats_goal_progress">စာလုံး %1$s / %2$s</string>
+    <string name="stats_goal_reached">နေ့စဉ်ပန်းတိုင် ပြည့်ပါပြီ</string>
+    <string name="stats_last_14_days">နောက်ဆုံး ၁၄ ရက်</string>
+    <string name="stats_best_day">အကောင်းဆုံးနေ့ — စာလုံး %1$s</string>
+    <string name="stats_by_status">အခြေအနေအလိုက်</string>
+    <string name="stats_by_category">အမျိုးအစားအလိုက်</string>
+    <string name="stats_uncategorized">အမျိုးအစား မသတ်မှတ်</string>
+    <string name="stats_longest_note">အရှည်ဆုံး မှတ်စု</string>
+    <string name="stats_words_chars">စာလုံး %1$s · အက္ခရာ %2$s</string>
+    <string name="stats_total_chars">အက္ခရာ %1$s</string>
+    <string name="stats_count_words">%1$d · စာလုံး %2$s</string>
+
+    <!-- ===== Phase 2: Reminder ===== -->
+    <string name="reminder_set">သတိပေးချက် သတ်မှတ်ပြီး</string>
+    <string name="reminder_removed">သတိပေးချက် ဖယ်ပြီး</string>
+    <string name="reminder_permission_denied">Notification ပိတ်ထားပါတယ်။ သတိပေးချက် ရဖို့ စနစ်ဆက်တင်မှာ ခွင့်ပြုပေးပါ။</string>
+    <string name="reminder_current">လက်ရှိ — %1$s</string>
+    <string name="reminder_in_1h">၁ နာရီအတွင်း</string>
+    <string name="reminder_in_3h">၃ နာရီအတွင်း</string>
+    <string name="reminder_tonight">ဒီည ၂၀:၀၀</string>
+    <string name="reminder_tomorrow_morning">မနက်ဖြန် ၀၉:၀၀</string>
+    <string name="reminder_next_week">နောက်အပတ်</string>
+    <string name="reminder_in_past">အဲဒီအချိန် ကျော်သွားပါပြီ</string>
+    <string name="reminder_set_action">သတိပေးချက် ထည့်</string>
+    <string name="reminder_remove">ဖယ်ရှား</string>
+    <string name="notif_channel_reminders">မှတ်စု သတိပေးချက်များ</string>
+    <string name="notif_channel_reminders_desc">မှတ်စုတစ်ခုချင်းစီမှာ သတ်မှတ်ထားသော သတိပေးချက်များ</string>
+
+    <!-- ===== Phase 2: Lock ===== -->
+    <string name="unlock">သော့ဖွင့်</string>
+    <string name="locked_note">သော့ခတ်ထားသော မှတ်စု</string>
+    <string name="locked_preview">သော့ခတ်ထားသည် — ဖတ်ရန် သော့ဖွင့်ပါ</string>
+    <string name="lock_intro">App တစ်ခုလုံး (သို့) ရွေးထားသော မှတ်စုများကိုသာ PIN ဖြင့် ကာကွယ်နိုင်ပါတယ်။ ဖုန်းက ပံ့ပိုးပါက လက်ဗွေ/မျက်နှာ ဖြင့်လည်း ဖွင့်နိုင်ပါတယ်။</string>
+    <string name="lock_pin_section">PIN</string>
+    <string name="lock_set_pin">PIN သတ်မှတ်မယ်</string>
+    <string name="lock_enabled">App တစ်ခုလုံး သော့ခတ်</string>
+    <string name="lock_enabled_hint">Alal ဖွင့်တိုင်း PIN မေးပါမယ်။ ပိတ်ထားပါက သော့ခတ်ထားသော မှတ်စုများသာ မေးပါမယ်။</string>
+    <string name="lock_change_pin">PIN ပြောင်းမယ်</string>
+    <string name="lock_remove_pin">PIN ဖယ်ပြီး မှတ်စုအားလုံး သော့ဖွင့်မယ်</string>
+    <string name="lock_options">ရွေးချယ်စရာများ</string>
+    <string name="lock_biometric">လက်ဗွေ / မျက်နှာ ဖြင့် ဖွင့်</string>
+    <string name="lock_biometric_hint">PIN ရိုက်မည့်အစား ဖုန်း၏ biometrics ကို သုံးပါမယ်။</string>
+    <string name="lock_biometric_unavailable">ဤစက်တွင် မရနိုင်ပါ</string>
+    <string name="lock_biometric_subtitle">Alal ကို သော့ဖွင့်ပါ</string>
+    <string name="lock_timeout">App မှ ထွက်ပြီးနောက် ပြန်သော့ခတ်ချိန်</string>
+    <string name="lock_timeout_immediately">ချက်ချင်း</string>
+    <string name="lock_timeout_seconds">%1$d စက္ကန့်</string>
+    <string name="lock_timeout_minutes">%1$d မိနစ်</string>
+    <string name="lock_notes_section">သော့ခတ်ထားသော မှတ်စုများ</string>
+    <string name="lock_notes_hint">မှတ်စုတစ်ခုချင်းကို အယ်ဒီတာ မီနူးမှ သော့ခတ်နိုင်ပါတယ်။ သော့ခတ်ထားသော မှတ်စုများ၏ စာသားကို ကတ်၊ ရှာဖွေမှုနှင့် သတိပေးချက်တို့မှာ မပြပါ။ PIN ကို အရန်ဖိုင်ထဲ လုံးဝ မထည့်ပါ။ PIN မေ့သွားပါက app data ကို ရှင်းရမှာဖြစ်ပြီး မှတ်စုများ ပျောက်မှာမို့ အရန်သိမ်းထားပါ။</string>
+    <string name="lock_setup_first">More → App သော့ခတ် မှာ PIN အရင် သတ်မှတ်ပါ</string>
+    <string name="lock_enter_pin">PIN ရိုက်ထည့်ပါ</string>
+    <string name="lock_enter_current_pin">လက်ရှိ PIN ရိုက်ပါ</string>
+    <string name="lock_enter_new_pin">PIN အသစ် ရိုက်ပါ</string>
+    <string name="lock_confirm_new_pin">PIN အသစ် ထပ်ရိုက်ပါ</string>
+    <string name="pin_length_hint">%1$d–%2$d လုံး</string>
+    <string name="pin_wrong">PIN မမှန်ပါ</string>
+    <string name="pin_too_short">PIN တိုလွန်းပါတယ်</string>
+    <string name="pin_mismatch">PIN နှစ်ခု မတူပါ — ထပ်ကြိုးစားပါ</string>
+    <string name="pin_too_many">အကြိမ်များလွန်းပါပြီ။ ၃၀ စက္ကန့် စောင့်ပါ။</string>
+
+    <!-- ===== Phase 2: Version history ===== -->
+    <string name="versions_intro">Alal က မှတ်စုတစ်ခုလျှင် snapshot %1$d ခုအထိ သိမ်းပေးပါတယ် — ရေးနေစဉ် ၁၀ မိနစ်တစ်ခါ (သို့) ကြီးကြီးမားမား ပြောင်းလဲမှုတိုင်းမှာ။</string>
+    <string name="versions_empty_title">ဗားရှင်း မရှိသေးပါ</string>
+    <string name="versions_empty_body">ဆက်ရေးသွားရင် snapshot များ ဒီမှာ ပေါ်လာပါမယ်။ အခုသိမ်းချင်ရင် + ကို နှိပ်ပါ။</string>
+    <string name="version_save_now">Snapshot အခု သိမ်းမယ်</string>
+    <string name="version_saved">Snapshot သိမ်းပြီး</string>
+    <string name="version_restore">ဤဗားရှင်းကို ပြန်ယူ</string>
+    <string name="version_restored">ဗားရှင်း ပြန်ယူပြီး — ယခင်စာသားကို snapshot အနေနှင့် သိမ်းထားပါတယ်</string>
+    <string name="versions_clear">ဗားရှင်းအားလုံး ဖျက်</string>
+    <string name="versions_clear_confirm">ဤမှတ်စု၏ သိမ်းထားသော ဗားရှင်းအားလုံး ဖျက်မလား? မှတ်စုကိုယ်တိုင်ကို မထိပါ။</string>
+    <string name="versions_cleared">ဗားရှင်းများ ဖျက်ပြီး</string>
+
+    <!-- Phase 2.1: export / outline / reading -->
+    <string name="export_format">ဖိုင်အမျိုးအစား</string>
+    <string name="export_markdown">Markdown</string>
+    <string name="export_markdown_hint">ခေါင်းစီး၊ စာလုံးအမှောင်၊ စာရင်းတွေ ကျန်မယ် — မည်သည့် text editor နဲ့မဆို ဖွင့်လို့ရ</string>
+    <string name="export_plain">စာသားသက်သက်</string>
+    <string name="export_plain_hint">ပုံစံအမှတ်အသားတွေ ဖယ်ထုတ်ထား</string>
+    <string name="export_pdf">PDF</string>
+    <string name="export_pdf_hint">A4 စာမျက်နှာ၊ မြန်မာဖောင့်နဲ့ — ပို့ဖို့ အသင့်</string>
+    <string name="export_save_file">ဖိုင်သိမ်း</string>
+    <string name="export_hint">ဖိုင်သိမ်း ဆိုရင် ဖိုလ်ဒါ (Google Drive အပါအဝင်) ရွေးလို့ရပါတယ်။ Share ဆိုရင် Gmail, Telegram, Viber စသည့် app တစ်ခုခုကို တိုက်ရိုက် ပို့ပေးပါတယ်။</string>
+    <string name="export_saved">ထုတ်ပြီးပါပြီ</string>
+    <string name="export_failed">ထုတ်လို့ မရပါ</string>
+    <string name="outline_empty">သွားစရာ မရှိသေးပါ။ ခေါင်းစီး (# ခေါင်းစီး) သို့ စာပိုဒ်တွေ ရေးရင် ဒီမှာ ပေါ်လာပါမယ်။</string>
+    <string name="outline_hint_headings">ခေါင်းစီး %1$d ခု — နှိပ်ပြီး သွားပါ</string>
+    <string name="outline_hint_paragraphs">ခေါင်းစီး မရှိလို့ စာပိုဒ် %1$d ခု ပြထား — နှိပ်ပြီး သွားပါ</string>
+    <string name="reading_smaller">စာလုံး ချုံ့</string>
+    <string name="reading_larger">စာလုံး ချဲ့</string>
+</resources>
