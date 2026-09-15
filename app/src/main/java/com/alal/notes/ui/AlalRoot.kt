@@ -1,14 +1,11 @@
 package com.alal.notes.ui
 
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -114,11 +111,9 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
         // Screens handle their own system-bar insets; the root only reserves room for the tab bar.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            AnimatedVisibility(
-                visible = showBar,
-                enter = slideInVertically(tween(220)) { it } + fadeIn(),
-                exit = slideOutVertically(tween(180)) { it } + fadeOut(),
-            ) {
+            // Switch bars atomically when opening an editor. Animating this bar changed the
+            // Scaffold's content padding for several frames and made the editor toolbar bounce.
+            if (showBar) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 0.dp) {
                     for (tab in tabs) {
                         val selected = destination?.hasRoute(tab.route::class) == true
@@ -178,10 +173,10 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings) {
         }
         composable<Route.Editor>(
             enterTransition = {
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(260)) + fadeIn(tween(200))
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(220)) + fadeIn(tween(140))
             },
             popExitTransition = {
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(220)) + fadeOut(tween(180))
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(200)) + fadeOut(tween(140))
             },
         ) { entry ->
             val route = entry.toRoute<Route.Editor>()
