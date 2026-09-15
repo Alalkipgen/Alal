@@ -101,6 +101,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -577,6 +579,34 @@ private fun EditorBody(
         val rect = runCatching { l.getCursorRect(cursor.coerceIn(0, l.layoutInput.text.length)) }.getOrNull() ?: return@LaunchedEffect
         val target = (rect.top - viewportH * 0.4f).roundToInt().coerceIn(0, scroll.maxValue)
         scroll.animateScrollTo(target)
+    }
+
+    // Keep the caret clear of the keyboard. Runs when the caret moves and when the viewport
+    // shrinks (the IME opening resizes the window), so typing near the bottom of a note never
+    // disappears behind the keyboard and the user never has to scroll by hand.
+    LaunchedEffect(cursor, viewportH) {
+        if (typewriter || viewportH == 0) return@LaunchedEffect
+        withFrameNanos { }
+        val l = layout ?: return@LaunchedEffect
+        val rect = runCatching { l.getCursorRect(cursor.coerceIn(0, l.layoutInput.text.length)) }.getOrNull() ?: return@LaunchedEffect
+        val margin = rect.height.coerceAtLeast(1f) * 1.5f
+        val top = scroll.value.toFloat()
+        val bottom = top + viewportH
+        val target = when {
+            rect.bottom + margin > bottom -> rect.bottom + margin - viewportH
+            rect.top - margin < top -> rect.top - margin
+            else -> return@LaunchedEffect
+        }
+        scroll.animateScrollTo(target.roundToInt().coerceIn(0, scroll.maxValue))
+    }
+
+    // Leaving the app (Home / recents) drops focus and the keyboard, so coming back shows the
+    // note in full instead of restoring a keyboard over the text.
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
+        keyboard?.hide()
+        focusManager.clearFocus(force = true)
     }
 
     val titleElevated by remember { derivedStateOf { scroll.value > 4 } }
