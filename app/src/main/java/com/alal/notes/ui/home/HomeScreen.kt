@@ -1,10 +1,6 @@
 package com.alal.notes.ui.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,9 +74,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import com.alal.notes.R
 import com.alal.notes.data.entity.Category
 import com.alal.notes.data.entity.Note
@@ -117,13 +111,6 @@ fun HomeScreen(
     var categoryDialog by remember { mutableStateOf<Category?>(null) }
     var showAddCategory by remember { mutableStateOf(false) }
     var statusMenu by remember { mutableStateOf(false) }
-
-    // Hide the FAB as soon as we navigate away. The root tab bar is removed at the start of the
-    // transition, which used to drop the still-visible FAB by the tab-bar height while it faded
-    // over the opening note - that jump is what looked like the "Write" button flashing.
-    var onScreen by remember { mutableStateOf(true) }
-    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { onScreen = false }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { onScreen = true }
 
     val gridState = rememberLazyStaggeredGridState()
     val listState = rememberLazyListState()
@@ -256,7 +243,7 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            AnimatedVisibility(visible = !state.selecting && onScreen, enter = fadeIn(), exit = fadeOut(tween(90))) {
+            if (!state.selecting) {
                 ExtendedFloatingActionButton(
                     onClick = { haptics.tick(); showTemplates = true },
                     expanded = fabExpanded,

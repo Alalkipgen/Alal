@@ -6,9 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
@@ -21,12 +20,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -115,44 +114,50 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
     val destination = backStack?.destination
     val showBar = tabs.any { tab -> destination?.hasRoute(tab.route::class) == true }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        // Screens handle their own system-bar insets; the root only reserves room for the tab bar.
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            // Switch bars atomically when opening an editor. Animating this bar changed the
-            // Scaffold's content padding for several frames and made the editor toolbar bounce.
-            if (showBar) {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 0.dp) {
-                    for (tab in tabs) {
-                        val selected = destination?.hasRoute(tab.route::class) == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(if (selected) tab.selectedIcon else tab.icon, contentDescription = null) },
-                            label = { Text(stringResource(tab.label)) },
-                        )
-                    }
+    // Keep navigation outside the screen-measuring path. The old root Scaffold changed its
+    // content height as soon as the tab bar disappeared, so the outgoing Home FAB first dropped
+    // vertically and then slid left. Tabs now reserve their own fixed bar space; the complete
+    // Home screen (including Write) therefore travels right-to-left as one stable surface.
+    Box(Modifier.fillMaxSize()) {
+        AlalNavHost(navController, settings)
+        if (showBar) {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 0.dp,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            ) {
+                for (tab in tabs) {
+                    val selected = destination?.hasRoute(tab.route::class) == true
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = {
+                            navController.navigate(tab.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Icon(if (selected) tab.selectedIcon else tab.icon, contentDescription = null) },
+                        label = { Text(stringResource(tab.label)) },
+                    )
                 }
             }
-        },
-    ) { padding ->
-        // Reserve space for the bottom tab bar so FABs / lists are never hidden behind it.
-        // consumeWindowInsets prevents nested Scaffolds from adding the navigation-bar inset twice.
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .consumeWindowInsets(padding),
-        ) {
-            AlalNavHost(navController, settings)
         }
+    }
+}
+
+@Composable
+private fun TabSurface(content: @Composable () -> Unit) {
+    // Material 3's NavigationBar is 80dp tall; navigationBarsPadding adds the gesture/button
+    // inset below it. Because this lives inside each tab destination it remains unchanged while
+    // that destination exits, avoiding any vertical relayout during the horizontal transition.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .padding(bottom = 80.dp),
+    ) {
+        content()
     }
 }
 
@@ -186,15 +191,17 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings) {
         },
     ) {
         composable<Route.Home> {
-            HomeScreen(
-                settings = settings,
-                onOpenNote = openNote,
-                onSearch = { navController.navigate(Route.Search) },
-            )
+            TabSurface {
+                HomeScreen(
+                    settings = settings,
+                    onOpenNote = openNote,
+                    onSearch = { navController.navigate(Route.Search) },
+                )
+            }
         }
-        composable<Route.Stats> { StatsScreen(settings = settings) }
+        composable<Route.Stats> { TabSurface { StatsScreen(settings = settings) } }
         composable<Route.More> {
-            MoreScreen(onNavigate = { route -> navController.navigate(route) })
+            TabSurface { MoreScreen(onNavigate = { route -> navController.navigate(route) }) }
         }
         composable<Route.Editor> { entry ->
             val route = entry.toRoute<Route.Editor>()

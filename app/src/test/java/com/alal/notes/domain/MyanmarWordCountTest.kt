@@ -47,10 +47,14 @@ class MyanmarWordCountTest {
         "\u1011\u1019\u1004\u103A\u1038\u1005\u102C\u1038\u1015\u103C\u102E\u1038\u1015\u103C\u102E\u101C\u102C\u1038"
 
     @Test
-    fun spacedBurmeseSentenceIsTenWords() {
+    fun spacedBurmeseSentenceMatchesIcuDictionary() {
         val s = counter.count(sentence1)
-        assertEquals("words in: $sentence1", 10, s.words)
-        assertEquals(10, s.myanmarWords)
+        // ICU 76.1 yields 9 lexical words:
+        // မနက် + တိုင်း, ရွာ + က, တိတ်ဆိတ်စွာ, နိုး + ထ + လာ + သည်.
+        // The previous expected value (10) treated a syllable inside တိတ်ဆိတ်စွာ as a word,
+        // contradicting the dictionary-based behavior this test is meant to verify.
+        assertEquals("words in: $sentence1", 9, s.words)
+        assertEquals(9, s.myanmarWords)
         assertEquals(0, s.latinWords)
         assertEquals(1, s.sentences)
     }

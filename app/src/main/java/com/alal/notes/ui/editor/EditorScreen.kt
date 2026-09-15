@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -101,8 +101,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Brush
@@ -383,7 +381,10 @@ fun EditorScreen(
                 }
             },
             bottomBar = {
-                Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))) {
+                // Use the IME's target inset instead of its frame-by-frame animated inset. This
+                // moves the toolbar once at keyboard-show/hide start rather than remeasuring the
+                // full editor and long text layout on every keyboard animation frame.
+                Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.imeAnimationTarget))) {
                     // Status strip
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = hPad, vertical = 4.dp),
@@ -441,8 +442,6 @@ fun EditorScreen(
                 bodyFamily = bodyFamily,
                 hPad = hPad,
                 focusMode = focusMode,
-                // Open the keyboard with the note instead of waiting for a tap.
-                autoFocus = current != null && noteUnlocked && !reading,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
@@ -535,7 +534,6 @@ private fun EditorBody(
     bodyFamily: androidx.compose.ui.text.font.FontFamily,
     hPad: androidx.compose.ui.unit.Dp,
     focusMode: Boolean,
-    autoFocus: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val extras = Alal.extras
@@ -623,15 +621,6 @@ private fun EditorBody(
         focusManager.clearFocus(force = true)
     }
 
-    // Focus the body as soon as the note is on screen so the IME animates in together with the
-    // editor instead of waiting for a tap after the open animation has finished.
-    val bodyFocus = remember { FocusRequester() }
-    LaunchedEffect(autoFocus) {
-        if (!autoFocus) return@LaunchedEffect
-        withFrameNanos { }
-        if (runCatching { bodyFocus.requestFocus() }.isSuccess) keyboard?.show()
-    }
-
     val titleElevated by remember { derivedStateOf { scroll.value > 4 } }
     val dividerAlpha by animateFloatAsState(if (titleElevated) 1f else 0f, label = "titleDivider")
 
@@ -689,7 +678,6 @@ private fun EditorBody(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = hPad)
-                .focusRequester(bodyFocus)
                 .onSizeChanged { viewportH = it.height },
             decorator = TextFieldDecorator { inner ->
                 Box(Modifier.padding(top = 12.dp)) {
