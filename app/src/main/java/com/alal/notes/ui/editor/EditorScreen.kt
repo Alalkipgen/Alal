@@ -101,6 +101,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Brush
@@ -286,8 +288,9 @@ fun EditorScreen(
                                 IconButton(onClick = { vm.finishEditing(); onBack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
                             },
                             actions = {
-                                IconButton(onClick = { vm.undo() }, enabled = vm.canUndo) { Icon(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.undo)) }
-                                IconButton(onClick = { vm.redo() }, enabled = vm.canRedo) { Icon(Icons.AutoMirrored.Rounded.Redo, stringResource(R.string.redo)) }
+                                // Own composable so that typing (which flips canUndo/canRedo)
+                                // only recomposes these two buttons, not the whole app bar.
+                                UndoRedoButtons(vm)
                                 IconButton(onClick = {
                                     scope.launch {
                                         val text = vm.shareText()
@@ -438,6 +441,8 @@ fun EditorScreen(
                 bodyFamily = bodyFamily,
                 hPad = hPad,
                 focusMode = focusMode,
+                // Open the keyboard with the note instead of waiting for a tap.
+                autoFocus = current != null && noteUnlocked && !reading,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
@@ -513,6 +518,16 @@ fun EditorScreen(
 }
 
 @Composable
+private fun UndoRedoButtons(vm: EditorViewModel) {
+    IconButton(onClick = { vm.undo() }, enabled = vm.canUndo) {
+        Icon(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.undo))
+    }
+    IconButton(onClick = { vm.redo() }, enabled = vm.canRedo) {
+        Icon(Icons.AutoMirrored.Rounded.Redo, stringResource(R.string.redo))
+    }
+}
+
+@Composable
 private fun EditorBody(
     vm: EditorViewModel,
     settings: Settings,
@@ -520,6 +535,7 @@ private fun EditorBody(
     bodyFamily: androidx.compose.ui.text.font.FontFamily,
     hPad: androidx.compose.ui.unit.Dp,
     focusMode: Boolean,
+    autoFocus: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val extras = Alal.extras
@@ -533,7 +549,19 @@ private fun EditorBody(
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val typewriter = focusMode && settings.typewriterMode
     val paragraphFocus = focusMode && settings.paragraphFocus
-    val cursor = vm.bodyState.selection.start
+    // The caret is read through derivedStateOf so a keystroke no longer recomposes this whole
+    // screen: with paragraph focus / typewriter off the derived value stays -1 and nothing
+    // invalidates, which is what made typing in a long note feel heavy.
+    val focusCursor by remember(paragraphFocus) {
+        derivedStateOf { if (paragraphFocus) vm.bodyState.selection.start else -1 }
+    }
+    val typeCursor by remember(typewriter) {
+        derivedStateOf { if (typewriter) vm.bodyState.selection.start else -1 }
+    }
+    // Placeholder visibility only flips between empty and non-empty, so derive it instead of
+    // reading the text itself inside the decorators.
+    val titleEmpty by remember { derivedStateOf { vm.titleState.text.isEmpty() } }
+    val bodyEmpty by remember { derivedStateOf { vm.bodyState.text.isEmpty() } }
 
     // Inline Markdown styling (bold/italic/heading/quote/list marks) + paragraph focus dimming.
     // Requires Compose Foundation 1.9+ (BOM 2025.08.00) for TextFieldBuffer.addStyle.
@@ -546,12 +574,12 @@ private fun EditorBody(
             titleFont = extras.type.title,
             bodySize = bodySize,
             paragraphFocus = paragraphFocus,
-            initialCursor = if (paragraphFocus) cursor else -1,
+            initialCursor = focusCursor,
         )
     }
     // Feeding the caret through snapshot state keeps the transformation instance stable, so a
     // cursor move only re-styles - it no longer rebuilds the whole text layout.
-    SideEffect { output.cursor = if (paragraphFocus) cursor else -1 }
+    SideEffect { output.cursor = focusCursor }
 
     // Find & Replace: when the current match changes (arrows / new query), scroll so its line is visible.
     val reveal by vm.revealSelection.collectAsStateWithLifecycle()
@@ -574,11 +602,11 @@ private fun EditorBody(
 
     // Typewriter scrolling: keep the caret line around 40% of the viewport. Only reacts to real
     // caret moves, so simply scrolling through the note no longer fights the user.
-    LaunchedEffect(typewriter, cursor) {
+    LaunchedEffect(typewriter, typeCursor) {
         if (!typewriter || viewportH == 0) return@LaunchedEffect
         withFrameNanos { }
         val l = layout ?: return@LaunchedEffect
-        val rect = runCatching { l.getCursorRect(cursor.coerceIn(0, l.layoutInput.text.length)) }.getOrNull() ?: return@LaunchedEffect
+        val rect = runCatching { l.getCursorRect(typeCursor.coerceIn(0, l.layoutInput.text.length)) }.getOrNull() ?: return@LaunchedEffect
         val target = (rect.top - viewportH * 0.4f).roundToInt().coerceIn(0, scroll.maxValue)
         scroll.animateScrollTo(target)
     }
@@ -593,6 +621,15 @@ private fun EditorBody(
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
         keyboard?.hide()
         focusManager.clearFocus(force = true)
+    }
+
+    // Focus the body as soon as the note is on screen so the IME animates in together with the
+    // editor instead of waiting for a tap after the open animation has finished.
+    val bodyFocus = remember { FocusRequester() }
+    LaunchedEffect(autoFocus) {
+        if (!autoFocus) return@LaunchedEffect
+        withFrameNanos { }
+        if (runCatching { bodyFocus.requestFocus() }.isSuccess) keyboard?.show()
     }
 
     val titleElevated by remember { derivedStateOf { scroll.value > 4 } }
@@ -616,7 +653,7 @@ private fun EditorBody(
             modifier = Modifier.fillMaxWidth().padding(horizontal = hPad),
             decorator = TextFieldDecorator { inner ->
                 Box {
-                    if (vm.titleState.text.isEmpty()) {
+                    if (titleEmpty) {
                         Text(
                             stringResource(R.string.title_hint),
                             fontFamily = extras.type.title, fontSize = 26.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold,
@@ -652,10 +689,11 @@ private fun EditorBody(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = hPad)
+                .focusRequester(bodyFocus)
                 .onSizeChanged { viewportH = it.height },
             decorator = TextFieldDecorator { inner ->
                 Box(Modifier.padding(top = 12.dp)) {
-                    if (vm.bodyState.text.isEmpty()) {
+                    if (bodyEmpty) {
                         Text(
                             stringResource(R.string.body_hint),
                             fontFamily = bodyFamily, fontSize = bodySize, lineHeight = bodySize * settings.lineHeight,

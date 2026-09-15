@@ -105,7 +105,13 @@ class MarkdownOutputTransformation(
     private companion object {
         /** Keep focus/IME changes cheap on long notes by avoiding full-buffer span work. */
         const val STYLE_LIMIT = 20_000
-        const val INLINE_LIMIT = 12_000
+
+        /**
+         * Inline markers are the expensive half (five full scans plus a span per match), so they
+         * stop earlier than block styling. Long notes keep heading / list / quote colouring and
+         * stay responsive while typing.
+         */
+        const val INLINE_LIMIT = 8_000
     }
 
     override fun TextFieldBuffer.transformOutput() {

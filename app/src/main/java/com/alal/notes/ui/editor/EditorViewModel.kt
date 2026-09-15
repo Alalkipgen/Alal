@@ -131,12 +131,19 @@ class EditorViewModel @Inject constructor(
     private val _statsReady = MutableStateFlow(false)
     val statsReady: StateFlow<Boolean> = _statsReady
 
-    /** Stats for the current selection only (null when collapsed). */
-    val selectionStats: StateFlow<TextStats?> = snapshotFlow { bodyState.selection to bodyState.text }
+    /**
+     * Stats for the current selection only (null when collapsed). Only the selection is observed;
+     * observing the text as well woke this flow (and re-read the whole note) on every keystroke.
+     */
+    val selectionStats: StateFlow<TextStats?> = snapshotFlow { bodyState.selection }
         .debounce(200)
-        .mapLatest { (sel, text) ->
-            if (sel.collapsed) null
-            else counter.count(text.subSequence(sel.min, sel.max.coerceAtMost(text.length)).toString(), method)
+        .mapLatest { sel ->
+            if (sel.collapsed) {
+                null
+            } else {
+                val text = bodyState.text
+                counter.count(text.subSequence(sel.min, sel.max.coerceAtMost(text.length)).toString(), method)
+            }
         }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

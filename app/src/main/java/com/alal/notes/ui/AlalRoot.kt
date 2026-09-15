@@ -1,11 +1,10 @@
 package com.alal.notes.ui
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -30,8 +29,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -63,6 +64,14 @@ import com.alal.notes.ui.settings.SettingsScreen
 import com.alal.notes.ui.versions.VersionsScreen
 
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
+
+/** One shared duration so the outgoing and incoming screens travel together. */
+private const val SLIDE_MS = 250
+
+private fun slideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
+
+private fun NavBackStackEntry?.isEditor(): Boolean =
+    this?.destination?.hasRoute(Route.Editor::class) == true
 
 @Composable
 fun AlalRoot(settings: Settings, pendingAction: String?, onActionConsumed: () -> Unit) {
@@ -155,10 +164,26 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings) {
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        enterTransition = { fadeIn(tween(200)) + scaleIn(initialScale = 0.96f, animationSpec = tween(220)) },
-        exitTransition = { fadeOut(tween(150)) },
-        popEnterTransition = { fadeIn(tween(200)) },
-        popExitTransition = { fadeOut(tween(150)) + scaleOut(targetScale = 0.96f, animationSpec = tween(200)) },
+        // Opening / closing a note is one horizontal move: the list slides out to the left while
+        // the editor slides in from the right (and the reverse on back). Both screens use the same
+        // spec, so nothing fades or scales on top of the other screen any more - that overlap is
+        // what made the "Write" button look like it flashed over the note.
+        enterTransition = {
+            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec())
+            else fadeIn(tween(150))
+        },
+        exitTransition = {
+            if (targetState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec())
+            else fadeOut(tween(110))
+        },
+        popEnterTransition = {
+            if (initialState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec())
+            else fadeIn(tween(150))
+        },
+        popExitTransition = {
+            if (initialState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec())
+            else fadeOut(tween(110))
+        },
     ) {
         composable<Route.Home> {
             HomeScreen(
@@ -171,14 +196,7 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings) {
         composable<Route.More> {
             MoreScreen(onNavigate = { route -> navController.navigate(route) })
         }
-        composable<Route.Editor>(
-            enterTransition = {
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(220)) + fadeIn(tween(140))
-            },
-            popExitTransition = {
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(200)) + fadeOut(tween(140))
-            },
-        ) { entry ->
+        composable<Route.Editor> { entry ->
             val route = entry.toRoute<Route.Editor>()
             EditorScreen(
                 noteId = route.noteId,
