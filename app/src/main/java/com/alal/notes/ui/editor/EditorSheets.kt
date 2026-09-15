@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
@@ -23,8 +25,10 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Label
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,11 +54,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,9 +68,11 @@ import com.alal.notes.R
 import com.alal.notes.data.entity.Note
 import com.alal.notes.domain.model.PaperTexture
 import com.alal.notes.domain.wordcount.TextStats
+import com.alal.notes.ui.components.AlalDialog
 import com.alal.notes.ui.components.ColorSwatch
 import com.alal.notes.ui.components.GoalProgressBar
 import com.alal.notes.ui.components.PillChip
+import com.alal.notes.ui.components.rememberAutoFocus
 import com.alal.notes.ui.theme.NoteBackgrounds
 import com.alal.notes.ui.util.Format
 import kotlin.math.roundToInt
@@ -333,49 +341,91 @@ private fun StatRow(label: String, value: String) {
 fun LinkDialog(initialLabel: String, onDismiss: () -> Unit, onInsert: (String, String) -> Unit) {
     var label by rememberSaveable { mutableStateOf(initialLabel) }
     var url by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.insert_link)) },
-        text = {
-            Column {
-                OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text(stringResource(R.string.link_text)) }, singleLine = true)
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text(stringResource(R.string.link_url)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-            }
-        },
-        confirmButton = { TextButton(onClick = { onInsert(label, url) }) { Text(stringResource(R.string.done)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    val focus = rememberAutoFocus()
+    val ready = url.isNotBlank()
+    AlalDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.insert_link),
+        icon = Icons.Rounded.Link,
+        confirmLabel = stringResource(R.string.done),
+        confirmEnabled = ready,
+        onConfirm = { onInsert(label, url) },
+        dismissLabel = stringResource(R.string.cancel),
+    ) {
+        OutlinedTextField(
+            value = label,
+            onValueChange = { label = it },
+            label = { Text(stringResource(R.string.link_text)) },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        )
+        OutlinedTextField(
+            value = url,
+            onValueChange = { url = it },
+            label = { Text(stringResource(R.string.link_url)) },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            placeholder = { Text("example.com", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (ready) onInsert(label, url) }),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Composable
 fun DetailsDialog(note: Note, stats: TextStats, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.note_details)) },
-        text = {
-            Column {
+    AlalDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.note_details),
+        icon = Icons.Rounded.Info,
+        confirmLabel = stringResource(R.string.ok),
+        onConfirm = onDismiss,
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                 StatRow(stringResource(R.string.created), Format.full(note.createdAt))
                 StatRow(stringResource(R.string.modified), Format.full(note.updatedAt))
+                HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 StatRow(stringResource(R.string.words), Format.number(stats.words))
                 StatRow(stringResource(R.string.characters), Format.number(stats.chars))
                 StatRow(stringResource(R.string.read_time), stringResource(R.string.min_read, stats.readMinutes))
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ok)) } },
-    )
+        }
+    }
 }
 
 @Composable
 fun TagDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_tag)) },
-        text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.tag_name)) }, singleLine = true) },
-        confirmButton = { TextButton(onClick = { if (name.isNotBlank()) onAdd(name) }) { Text(stringResource(R.string.done)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    val focus = rememberAutoFocus()
+    val ready = name.isNotBlank()
+    AlalDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.add_tag),
+        icon = Icons.Rounded.Label,
+        confirmLabel = stringResource(R.string.done),
+        confirmEnabled = ready,
+        onConfirm = { onAdd(name.trim()) },
+        dismissLabel = stringResource(R.string.cancel),
+    ) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text(stringResource(R.string.tag_name)) },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (ready) onAdd(name.trim()) }),
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        )
+    }
 }
 
 /** Small segmented control used for heading level choice. */

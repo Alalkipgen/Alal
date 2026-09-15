@@ -40,7 +40,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
@@ -89,6 +88,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -103,9 +104,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
@@ -521,9 +520,12 @@ private fun EditorBody(
 ) {
     val extras = Alal.extras
     val cs = MaterialTheme.colorScheme
+    // The body field scrolls itself (see `scrollState` below) instead of living inside a
+    // parent `verticalScroll`. Nesting a full-height text field in a scroll container made the
+    // container re-measure on every text layout, which is what threw the view back to the top
+    // once you reached the bottom of a long note.
     val scroll = rememberScrollState()
     var viewportH by remember { mutableIntStateOf(0) }
-    var bodyTop by remember { mutableIntStateOf(0) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val typewriter = focusMode && settings.typewriterMode
     val paragraphFocus = focusMode && settings.paragraphFocus
@@ -531,8 +533,7 @@ private fun EditorBody(
 
     // Inline Markdown styling (bold/italic/heading/quote/list marks) + paragraph focus dimming.
     // Requires Compose Foundation 1.9+ (BOM 2025.08.00) for TextFieldBuffer.addStyle.
-    val focusCursor = if (paragraphFocus) cursor else -1
-    val output = remember(cs.primary, cs.onSurface, cs.onSurfaceVariant, extras.type.title, bodySize, paragraphFocus, focusCursor) {
+    val output = remember(cs.primary, cs.onSurface, cs.onSurfaceVariant, extras.type.title, bodySize, paragraphFocus) {
         MarkdownOutputTransformation(
             accent = cs.primary,
             onSurface = cs.onSurface,
@@ -541,9 +542,12 @@ private fun EditorBody(
             titleFont = extras.type.title,
             bodySize = bodySize,
             paragraphFocus = paragraphFocus,
-            cursor = focusCursor,
+            initialCursor = if (paragraphFocus) cursor else -1,
         )
     }
+    // Feeding the caret through snapshot state keeps the transformation instance stable, so a
+    // cursor move only re-styles - it no longer rebuilds the whole text layout.
+    SideEffect { output.cursor = if (paragraphFocus) cursor else -1 }
 
     // Find & Replace: when the current match changes (arrows / new query), scroll so its line is visible.
     val reveal by vm.revealSelection.collectAsStateWithLifecycle()
@@ -554,35 +558,33 @@ private fun EditorBody(
         val l = layout ?: return@LaunchedEffect
         val sel = vm.bodyState.selection.start.coerceIn(0, l.layoutInput.text.length)
         val rect = runCatching { l.getCursorRect(sel) }.getOrNull() ?: return@LaunchedEffect
-        val lineTop = bodyTop + rect.top
-        val lineBottom = bodyTop + rect.bottom
         val visibleTop = scroll.value.toFloat()
         val visibleBottom = visibleTop + viewportH
         val margin = viewportH * 0.15f
-        if (lineTop < visibleTop + margin || lineBottom > visibleBottom - margin) {
+        if (rect.top < visibleTop + margin || rect.bottom > visibleBottom - margin) {
             // Place the match roughly a third of the way down the viewport.
-            val target = (lineTop - viewportH * 0.33f).roundToInt().coerceIn(0, scroll.maxValue)
+            val target = (rect.top - viewportH * 0.33f).roundToInt().coerceIn(0, scroll.maxValue)
             scroll.animateScrollTo(target)
         }
     }
 
-    // Typewriter scrolling: keep the caret line around 40% of the viewport.
-    LaunchedEffect(typewriter, cursor, layout, viewportH) {
+    // Typewriter scrolling: keep the caret line around 40% of the viewport. Only reacts to real
+    // caret moves, so simply scrolling through the note no longer fights the user.
+    LaunchedEffect(typewriter, cursor) {
         if (!typewriter || viewportH == 0) return@LaunchedEffect
+        withFrameNanos { }
         val l = layout ?: return@LaunchedEffect
         val rect = runCatching { l.getCursorRect(cursor.coerceIn(0, l.layoutInput.text.length)) }.getOrNull() ?: return@LaunchedEffect
-        val target = (bodyTop + rect.top - viewportH * 0.4f).roundToInt().coerceAtLeast(0)
+        val target = (rect.top - viewportH * 0.4f).roundToInt().coerceIn(0, scroll.maxValue)
         scroll.animateScrollTo(target)
     }
 
-    Column(
-        modifier
-            .onSizeChanged { viewportH = it.height }
-            .verticalScroll(scroll)
-            .padding(horizontal = hPad),
-    ) {
+    val titleElevated by remember { derivedStateOf { scroll.value > 4 } }
+    val dividerAlpha by animateFloatAsState(if (titleElevated) 1f else 0f, label = "titleDivider")
+
+    Column(modifier) {
         Spacer(Modifier.height(8.dp))
-        // Title
+        // Title - pinned above the body so the caret never fights two scroll containers.
         BasicTextField(
             state = vm.titleState,
             textStyle = TextStyle(
@@ -595,7 +597,7 @@ private fun EditorBody(
             lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
             cursorBrush = SolidColor(cs.primary),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = hPad),
             decorator = TextFieldDecorator { inner ->
                 Box {
                     if (vm.titleState.text.isEmpty()) {
@@ -610,6 +612,10 @@ private fun EditorBody(
             },
         )
         Spacer(Modifier.height(12.dp))
+        HorizontalDivider(
+            Modifier.padding(horizontal = hPad).alpha(dividerAlpha),
+            color = cs.outlineVariant.copy(alpha = 0.6f),
+        )
         // Body
         BasicTextField(
             state = vm.bodyState,
@@ -623,12 +629,16 @@ private fun EditorBody(
             outputTransformation = output,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             cursorBrush = SolidColor(cs.primary),
+            lineLimits = TextFieldLineLimits.MultiLine(),
+            scrollState = scroll,
             onTextLayout = { getResult -> layout = getResult() },
             modifier = Modifier
                 .fillMaxWidth()
-                .onGloballyPositioned { bodyTop = it.positionInParent().y.roundToInt() },
+                .weight(1f)
+                .padding(horizontal = hPad)
+                .onSizeChanged { viewportH = it.height },
             decorator = TextFieldDecorator { inner ->
-                Box {
+                Box(Modifier.padding(top = 12.dp)) {
                     if (vm.bodyState.text.isEmpty()) {
                         Text(
                             stringResource(R.string.body_hint),
@@ -640,8 +650,6 @@ private fun EditorBody(
                 }
             },
         )
-        // Room to type past the toolbar / keyboard and for typewriter centring
-        Spacer(Modifier.height(if (typewriter) 400.dp else 160.dp))
     }
 }
 

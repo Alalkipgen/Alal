@@ -5,6 +5,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -89,8 +92,20 @@ class MarkdownOutputTransformation(
     private val titleFont: FontFamily,
     private val bodySize: TextUnit,
     private val paragraphFocus: Boolean,
-    private val cursor: Int,
+    initialCursor: Int = -1,
 ) : OutputTransformation {
+
+    /**
+     * Caret offset used by paragraph focus. It is snapshot state rather than a constructor
+     * argument so that moving the caret does not force a brand-new transformation object (which
+     * would make the text field throw away its whole layout on every cursor move).
+     */
+    var cursor: Int by mutableIntStateOf(initialCursor)
+
+    private companion object {
+        /** Notes longer than this skip the inline pass; block styling alone stays instant. */
+        const val INLINE_LIMIT = 120_000
+    }
 
     override fun TextFieldBuffer.transformOutput() {
         val text = asCharSequence()
@@ -105,26 +120,36 @@ class MarkdownOutputTransformation(
         while (lineStart <= n) {
             var lineEnd = lineStart
             while (lineEnd < n && text[lineEnd] != '\n') lineEnd++
-            val line = text.subSequence(lineStart, lineEnd)
-            val trimmed = line.toString()
+            // No substring/toString here: the old code allocated a String per line on every
+            // output pass, which is what made typing in a long note stutter.
+            val len = lineEnd - lineStart
             when {
-                trimmed.startsWith("### ") -> heading(lineStart, lineEnd, 4, bodySize * 1.15f)
-                trimmed.startsWith("## ") -> heading(lineStart, lineEnd, 3, bodySize * 1.3f)
-                trimmed.startsWith("# ") -> heading(lineStart, lineEnd, 2, bodySize * 1.5f)
-                trimmed.startsWith("> ") -> {
+                text.has(lineStart, lineEnd, "### ") -> heading(lineStart, lineEnd, 4, bodySize * 1.15f)
+                text.has(lineStart, lineEnd, "## ") -> heading(lineStart, lineEnd, 3, bodySize * 1.3f)
+                text.has(lineStart, lineEnd, "# ") -> heading(lineStart, lineEnd, 2, bodySize * 1.5f)
+                text.has(lineStart, lineEnd, "> ") -> {
                     addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 1)
                     addStyle(SpanStyle(fontStyle = FontStyle.Italic, color = muted), lineStart + 2, lineEnd)
                 }
-                trimmed.startsWith("- [ ] ") || trimmed.startsWith("- [x] ") || trimmed.startsWith("- [X] ") -> {
-                    addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 5)
-                    if (trimmed[3] != ' ') addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted), lineStart + 6, lineEnd)
+                text.has(lineStart, lineEnd, "- [") && len >= 6 && text[lineStart + 4] == ']' && text[lineStart + 5] == ' ' -> {
+                    val mark = text[lineStart + 3]
+                    if (mark == ' ' || mark == 'x' || mark == 'X') {
+                        addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 5)
+                        if (mark != ' ') {
+                            addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted), lineStart + 6, lineEnd)
+                        }
+                    }
                 }
-                trimmed.startsWith("- ") || trimmed.startsWith("* ") -> addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 1)
-                trimmed == "---" || trimmed == "***" -> addStyle(SpanStyle(color = muted.copy(alpha = 0.5f), letterSpacing = 4.sp), lineStart, lineEnd)
+                text.has(lineStart, lineEnd, "- ") || text.has(lineStart, lineEnd, "* ") ->
+                    addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 1)
+                len == 3 && (text.has(lineStart, lineEnd, "---") || text.has(lineStart, lineEnd, "***")) ->
+                    addStyle(SpanStyle(color = muted.copy(alpha = 0.5f), letterSpacing = 4.sp), lineStart, lineEnd)
                 else -> {
-                    val dot = trimmed.indexOf(". ")
-                    if (dot in 1..3 && trimmed.substring(0, dot).all { it.isDigit() }) {
-                        addStyle(SpanStyle(color = accent, fontWeight = FontWeight.SemiBold), lineStart, lineStart + dot + 1)
+                    // "1. ", "12. ", "123. " ordered-list markers
+                    var d = 0
+                    while (d < 3 && lineStart + d < lineEnd && text[lineStart + d].isDigit()) d++
+                    if (d in 1..3 && lineStart + d + 1 < lineEnd && text[lineStart + d] == '.' && text[lineStart + d + 1] == ' ') {
+                        addStyle(SpanStyle(color = accent, fontWeight = FontWeight.SemiBold), lineStart, lineStart + d + 1)
                     }
                 }
             }
@@ -151,14 +176,16 @@ class MarkdownOutputTransformation(
             lineStart = lineEnd + 1
         }
 
-        // --- inline level
-        inline(text, "**", SpanStyle(fontWeight = FontWeight.Bold), syntax)
-        inline(text, "==", SpanStyle(background = highlight), syntax)
-        inline(text, "++", SpanStyle(textDecoration = TextDecoration.Underline), syntax)
-        inline(text, "~~", SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted), syntax)
-        inline(text, "`", SpanStyle(fontFamily = FontFamily.Monospace, background = muted.copy(alpha = 0.12f)), syntax)
-        singleStarItalic(text, syntax)
-        links(text, syntax)
+        // --- inline level (skipped for very large notes so scrolling stays smooth)
+        if (n <= INLINE_LIMIT) {
+            inline(text, "**", SpanStyle(fontWeight = FontWeight.Bold), syntax)
+            inline(text, "==", SpanStyle(background = highlight), syntax)
+            inline(text, "++", SpanStyle(textDecoration = TextDecoration.Underline), syntax)
+            inline(text, "~~", SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted), syntax)
+            inline(text, "`", SpanStyle(fontFamily = FontFamily.Monospace, background = muted.copy(alpha = 0.12f)), syntax)
+            singleStarItalic(text, syntax)
+            links(text, syntax)
+        }
 
         if (paragraphFocus && focusStart >= 0) {
             val dim = SpanStyle(color = onSurface.copy(alpha = 0.35f))
@@ -227,6 +254,13 @@ class MarkdownOutputTransformation(
             }
             i = close + 1
         }
+    }
+
+    /** Allocation-free `startsWith` for the line that spans [start, end). */
+    private fun CharSequence.has(start: Int, end: Int, prefix: String): Boolean {
+        if (end - start < prefix.length) return false
+        for (i in prefix.indices) if (this[start + i] != prefix[i]) return false
+        return true
     }
 
     private fun indexOf(text: CharSequence, needle: String, from: Int): Int {

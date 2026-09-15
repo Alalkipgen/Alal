@@ -1,18 +1,33 @@
 package com.alal.notes.ui.util
 
+import android.os.Build
 import android.text.format.DateFormat
+import android.view.HapticFeedbackConstants
+import android.view.View
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.hapticfeedback.HapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 object Format {
     private val numberFormat: NumberFormat = NumberFormat.getIntegerInstance(Locale.US)
+
+    // Date formatting happens once per visible note card, so the formatters (and the
+    // Calendar used to pick a pattern) are cached instead of re-allocated every frame.
+    private val formatters = HashMap<String, SimpleDateFormat>(8)
+    private val calendarA = Calendar.getInstance()
+    private val calendarB = Calendar.getInstance()
+
+    @Synchronized
+    private fun formatter(pattern: String, locale: Locale): SimpleDateFormat {
+        val key = pattern + '|' + locale.toLanguageTag()
+        return formatters.getOrPut(key) { SimpleDateFormat(pattern, locale) }
+    }
 
     /** 2340 -> "2,340" */
     fun number(n: Int): String = numberFormat.format(n)
@@ -25,30 +40,62 @@ object Format {
     }
 
     /** "13:30" for today, "Sep 1" for this year, "Sep 1, 2025" otherwise. */
+    @Synchronized
     fun relative(timestamp: Long, is24h: Boolean, locale: Locale = Locale.getDefault()): String {
-        val now = Calendar.getInstance()
-        val then = Calendar.getInstance().apply { timeInMillis = timestamp }
-        val sameDay = now.get(Calendar.YEAR) == then.get(Calendar.YEAR) && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+        val now = calendarA.apply { timeInMillis = System.currentTimeMillis() }
+        val then = calendarB.apply { timeInMillis = timestamp }
         val sameYear = now.get(Calendar.YEAR) == then.get(Calendar.YEAR)
+        val sameDay = sameYear && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
         val pattern = when {
             sameDay -> if (is24h) "HH:mm" else "h:mm a"
             sameYear -> "MMM d"
             else -> "MMM d, yyyy"
         }
-        return java.text.SimpleDateFormat(pattern, locale).format(Date(timestamp))
+        return formatter(pattern, locale).format(Date(timestamp))
     }
 
     fun full(timestamp: Long, locale: Locale = Locale.getDefault()): String =
-        java.text.SimpleDateFormat("MMM d, yyyy · HH:mm", locale).format(Date(timestamp))
+        formatter("MMM d, yyyy · HH:mm", locale).format(Date(timestamp))
 }
 
 @Composable
 fun rememberIs24Hour(): Boolean = DateFormat.is24HourFormat(LocalContext.current)
 
 @Composable
-fun rememberHaptics(): Haptics = Haptics(LocalHapticFeedback.current)
+fun rememberHaptics(): Haptics {
+    val view = LocalView.current
+    return remember(view) { Haptics(view) }
+}
 
-class Haptics(private val feedback: HapticFeedback) {
-    fun tick() = feedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-    fun confirm() = feedback.performHapticFeedback(HapticFeedbackType.LongPress)
+/**
+ * Thin wrapper over the platform haptic constants. Using the View API (instead of the Compose
+ * one) lets us pick the richer feedback types that Android 11+ exposes and degrade gracefully
+ * on older devices. Every call is ignored by the system when the user turned haptics off.
+ */
+class Haptics(private val view: View) {
+
+    private fun play(constant: Int) {
+        view.performHapticFeedback(constant, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING)
+    }
+
+    /** Light tick: toolbar buttons, chip taps, moving through a list. */
+    fun tick() = play(HapticFeedbackConstants.CLOCK_TICK)
+
+    /** Selection changed: switching tab, toggling an option. */
+    fun select() = play(HapticFeedbackConstants.CONTEXT_CLICK)
+
+    /** A destructive or long-press gesture became active. */
+    fun confirm() = play(HapticFeedbackConstants.LONG_PRESS)
+
+    /** An action completed successfully (save, export, restore). */
+    fun success() = play(
+        if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM
+        else HapticFeedbackConstants.LONG_PRESS
+    )
+
+    /** An action was refused (empty field, locked note, failed import). */
+    fun warn() = play(
+        if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT
+        else HapticFeedbackConstants.LONG_PRESS
+    )
 }

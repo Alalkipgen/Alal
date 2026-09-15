@@ -2,7 +2,6 @@ package com.alal.notes.ui.editor
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.placeCursorAtEnd
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.TextRange
 import androidx.lifecycle.ViewModel
@@ -117,17 +116,18 @@ class EditorViewModel @Inject constructor(
     fun unlockNote() { _noteUnlocked.value = true }
 
     /** Debounced (300 ms) statistics computed off the main thread. */
-    val stats: StateFlow<TextStats> = snapshotFlow { bodyState.text.toString() }
+    val stats: StateFlow<TextStats> = snapshotFlow { bodyState.text }
         .debounce(300)
-        .mapLatest { text -> counter.count(text, method) }
+        .mapLatest { text -> counter.count(text.toString(), method) }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TextStats())
 
     /** Stats for the current selection only (null when collapsed). */
-    val selectionStats: StateFlow<TextStats?> = snapshotFlow { bodyState.selection to bodyState.text.toString() }
+    val selectionStats: StateFlow<TextStats?> = snapshotFlow { bodyState.selection to bodyState.text }
         .debounce(200)
         .mapLatest { (sel, text) ->
-            if (sel.collapsed) null else counter.count(text.substring(sel.min, sel.max), method)
+            if (sel.collapsed) null
+            else counter.count(text.subSequence(sel.min, sel.max.coerceAtMost(text.length)).toString(), method)
         }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -164,9 +164,15 @@ class EditorViewModel @Inject constructor(
         }
         // Auto-save
         viewModelScope.launch {
-            snapshotFlow { titleState.text.toString() to bodyState.text.toString() }
+            // Observe the CharSequence identities only. Calling toString() here copied the whole
+            // note twice on every keystroke, which is what made typing in long notes stutter;
+            // save() already compares against the stored content before writing.
+            snapshotFlow { titleState.text to bodyState.text }
                 .drop(1)
-                .distinctUntilChanged()
+                .distinctUntilChanged { a, b ->
+                    // contentEquals walks the chars without allocating a copy.
+                    a.first.contentEquals(b.first) && a.second.contentEquals(b.second)
+                }
                 .map { dirty = true; it }
                 .debounce { autoSaveDelay }
                 .collect { save() }
@@ -181,7 +187,7 @@ class EditorViewModel @Inject constructor(
         }
         // Re-run find on text changes while the bar is open
         viewModelScope.launch {
-            snapshotFlow { bodyState.text.toString() }
+            snapshotFlow { bodyState.text }
                 .debounce(150)
                 .collect { if (_find.value.visible) runFind(keepIndex = true) }
         }
@@ -194,8 +200,10 @@ class EditorViewModel @Inject constructor(
         loadJob = viewModelScope.launch {
             val n = repository.getNote(id) ?: return@launch
             loadedNote.value = n
-            titleState.setTextAndPlaceCursorAtEnd(n.title)
-            bodyState.setTextAndPlaceCursorAtEnd(n.body)
+            // Open at the top of the note. Placing the caret at the end used to scroll a long
+            // note straight to its bottom and fight the user's first scroll gesture.
+            titleState.setTextKeepingCursor(n.title, 0)
+            bodyState.setTextKeepingCursor(n.body, 0)
             bodyState.undoState.clearHistory()
             goalWasReached = n.wordGoal?.let { it > 0 && n.wordCount >= it } ?: false
             dirty = false
@@ -210,8 +218,9 @@ class EditorViewModel @Inject constructor(
                     return@collect
                 }
                 loadedNote.value = fresh
-                titleState.setTextAndPlaceCursorAtEnd(fresh.title)
-                bodyState.setTextAndPlaceCursorAtEnd(fresh.body)
+                // Keep the caret where the user left it when content changes underneath us.
+                titleState.setTextKeepingCursor(fresh.title, titleState.selection.start)
+                bodyState.setTextKeepingCursor(fresh.body, bodyState.selection.start)
                 dirty = false
             }
         }
@@ -410,8 +419,8 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             save()
             repository.snapshotNow(id)
-            titleState.setTextAndPlaceCursorAtEnd(v.title)
-            bodyState.setTextAndPlaceCursorAtEnd(v.body)
+            titleState.setTextKeepingCursor(v.title, 0)
+            bodyState.setTextKeepingCursor(v.body, 0)
             dirty = true
             save(force = true)
             _message.value = com.alal.notes.R.string.version_restored
@@ -508,5 +517,17 @@ class EditorViewModel @Inject constructor(
         val title = titleState.text.toString()
         val body = bodyState.text.toString()
         GlobalScope.launch(Dispatchers.IO) { repository.saveContent(base, title, body, method) }
+    }
+}
+
+/**
+ * Replaces the whole content but puts the caret at [cursor] (clamped) instead of at the end,
+ * so restoring or reloading a note never yanks the view to the bottom.
+ */
+private fun TextFieldState.setTextKeepingCursor(value: String, cursor: Int) {
+    edit {
+        replace(0, length, value)
+        val at = cursor.coerceIn(0, length)
+        selection = TextRange(at)
     }
 }
