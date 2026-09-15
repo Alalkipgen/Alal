@@ -103,14 +103,15 @@ class MarkdownOutputTransformation(
     var cursor: Int by mutableIntStateOf(initialCursor)
 
     private companion object {
-        /** Notes longer than this skip the inline pass; block styling alone stays instant. */
-        const val INLINE_LIMIT = 120_000
+        /** Keep focus/IME changes cheap on long notes by avoiding full-buffer span work. */
+        const val STYLE_LIMIT = 20_000
+        const val INLINE_LIMIT = 12_000
     }
 
     override fun TextFieldBuffer.transformOutput() {
         val text = asCharSequence()
         val n = text.length
-        if (n == 0) return
+        if (n == 0 || n > STYLE_LIMIT) return
         val syntax = SpanStyle(color = muted.copy(alpha = 0.55f))
 
         // --- block level: iterate over lines

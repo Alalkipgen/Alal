@@ -56,6 +56,11 @@ data class WordSegment(val start: Int, val end: Int, val ruleStatus: Int) {
  */
 fun interface WordBreakEngine {
     fun segments(text: String): List<WordSegment>
+
+    /** Allocation-free path used by the Android ICU implementation. */
+    fun forEachSegment(text: String, action: (start: Int, end: Int, ruleStatus: Int) -> Unit) {
+        for (segment in segments(text)) action(segment.start, segment.end, segment.ruleStatus)
+    }
 }
 
 /**
@@ -126,9 +131,10 @@ class WordCounter(private val engine: WordBreakEngine = BasicWordBreakEngine) {
             }
         } else {
             val s = text.toString()
-            for (seg in engine.segments(s)) {
-                if (!seg.isWordLike) continue
-                if (containsMyanmar(s, seg.start, seg.end)) myanmar++ else latin++
+            engine.forEachSegment(s) { start, end, ruleStatus ->
+                if (ruleStatus >= WordSegment.RULE_STATUS_NUMBER) {
+                    if (containsMyanmar(s, start, end)) myanmar++ else latin++
+                }
             }
         }
         val words = myanmar + latin

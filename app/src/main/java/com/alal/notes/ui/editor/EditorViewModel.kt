@@ -31,6 +31,7 @@ import com.alal.notes.domain.model.PaperTexture
 import com.alal.notes.domain.model.WordCountMethod
 import com.alal.notes.domain.wordcount.TextStats
 import com.alal.notes.domain.wordcount.WordCounter
+import com.alal.notes.domain.wordcount.isMyanmarChar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -54,6 +56,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -89,6 +92,13 @@ class EditorViewModel @Inject constructor(
     private var method: WordCountMethod = WordCountMethod.MYANMAR_SYLLABLE
     private var autoSaveDelay: Long = 1000L
     private var dirty = false
+    private var statsRefreshJob: Job? = null
+    private var statsSeedBody: String? = null
+
+    private companion object {
+        const val LONG_NOTE_CHARS = 16_000
+        const val LONG_NOTE_STATS_DEBOUNCE_MS = 900L
+    }
 
     /** Latest persisted note (metadata such as pin, status, goal, background). */
     val note: StateFlow<Note?> = noteId
@@ -115,12 +125,11 @@ class EditorViewModel @Inject constructor(
     val noteUnlocked: StateFlow<Boolean> = _noteUnlocked
     fun unlockNote() { _noteUnlocked.value = true }
 
-    /** Debounced (300 ms) statistics computed off the main thread. */
-    val stats: StateFlow<TextStats> = snapshotFlow { bodyState.text }
-        .debounce(300)
-        .mapLatest { text -> counter.count(text.toString(), method) }
-        .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TextStats())
+    /** Statistics are seeded from the database, then refreshed off the main thread. */
+    private val _stats = MutableStateFlow(TextStats.EMPTY)
+    val stats: StateFlow<TextStats> = _stats
+    private val _statsReady = MutableStateFlow(false)
+    val statsReady: StateFlow<Boolean> = _statsReady
 
     /** Stats for the current selection only (null when collapsed). */
     val selectionStats: StateFlow<TextStats?> = snapshotFlow { bodyState.selection to bodyState.text }
@@ -162,6 +171,22 @@ class EditorViewModel @Inject constructor(
                 autoSaveDelay = it.autoSaveDelayMs.toLong().coerceIn(300L, 10_000L)
             }
         }
+        // Recount only after real edits. The persisted count is used immediately on load so a
+        // long ICU dictionary pass never competes with the first keyboard animation.
+        viewModelScope.launch {
+            snapshotFlow { bodyState.text }
+                .drop(1)
+                .debounce { text -> if (text.length >= LONG_NOTE_CHARS) LONG_NOTE_STATS_DEBOUNCE_MS else 300L }
+                .collectLatest { text ->
+                    val seeded = statsSeedBody
+                    statsSeedBody = null
+                    if (seeded != null && text.contentEquals(seeded)) return@collectLatest
+                    statsRefreshJob?.cancel()
+                    val value = text.toString()
+                    _stats.value = withContext(Dispatchers.Default) { counter.count(value, method) }
+                    _statsReady.value = true
+                }
+        }
         // Auto-save
         viewModelScope.launch {
             // Observe the CharSequence identities only. Calling toString() here copied the whole
@@ -196,10 +221,15 @@ class EditorViewModel @Inject constructor(
     fun load(id: Long) {
         if (noteId.value == id) return
         loadJob?.cancel()
+        statsRefreshJob?.cancel()
+        _statsReady.value = false
         noteId.value = id
         loadJob = viewModelScope.launch {
             val n = repository.getNote(id) ?: return@launch
             loadedNote.value = n
+            _stats.value = seedStats(n)
+            _statsReady.value = true
+            statsSeedBody = n.body
             // Open at the top of the note. Placing the caret at the end used to scroll a long
             // note straight to its bottom and fight the user's first scroll gesture.
             titleState.setTextKeepingCursor(n.title, 0)
@@ -208,6 +238,15 @@ class EditorViewModel @Inject constructor(
             goalWasReached = n.wordGoal?.let { it > 0 && n.wordCount >= it } ?: false
             dirty = false
             _noteUnlocked.value = !n.isLocked
+            // Small notes can fill detailed stats immediately. Long notes keep the persisted
+            // summary until the user edits or opens Details, so no CPU-heavy ICU pass races the IME.
+            if (n.body.length < LONG_NOTE_CHARS) {
+                statsRefreshJob = viewModelScope.launch {
+                    if (loadedNote.value?.id == n.id && !dirty && bodyState.text.contentEquals(n.body)) {
+                        _stats.value = withContext(Dispatchers.Default) { counter.count(n.body, method) }
+                    }
+                }
+            }
             // Pick up content changed elsewhere (e.g. "Restore" from Version history) while this
             // editor is open and has no unsaved typing of its own.
             repository.observeNote(id).collect { fresh ->
@@ -218,6 +257,9 @@ class EditorViewModel @Inject constructor(
                     return@collect
                 }
                 loadedNote.value = fresh
+                _stats.value = seedStats(fresh)
+                _statsReady.value = true
+                statsSeedBody = fresh.body
                 // Keep the caret where the user left it when content changes underneath us.
                 titleState.setTextKeepingCursor(fresh.title, titleState.selection.start)
                 bodyState.setTextKeepingCursor(fresh.body, bodyState.selection.start)
@@ -503,6 +545,41 @@ class EditorViewModel @Inject constructor(
     }
 
     suspend fun currentMethod(): WordCountMethod = prefs.settings.first().wordCountMethod
+
+    /** Computes the full breakdown only when a detail view actually needs it. */
+    fun refreshDetailedStats() {
+        statsRefreshJob?.cancel()
+        val value = bodyState.text.toString()
+        statsRefreshJob = viewModelScope.launch {
+            _stats.value = withContext(Dispatchers.Default) { counter.count(value, method) }
+            _statsReady.value = true
+        }
+    }
+
+    private fun seedStats(note: Note): TextStats {
+        val words = note.wordCount.coerceAtLeast(0)
+        val chars = note.charCount.coerceAtLeast(0)
+        var charsNoSpaces = 0
+        var hasMyanmar = false
+        for (c in note.body) {
+            if (!c.isWhitespace()) charsNoSpaces++
+            if (!hasMyanmar && isMyanmarChar(c)) hasMyanmar = true
+        }
+        val myanmarWords = if (hasMyanmar) words else 0
+        val latinWords = words - myanmarWords
+        val readMinutes = if (words == 0) 0 else {
+            val speed = if (hasMyanmar) 150 else 200
+            ((words + speed - 1) / speed).coerceAtLeast(1)
+        }
+        return TextStats(
+            words = words,
+            myanmarWords = myanmarWords,
+            latinWords = latinWords,
+            chars = chars,
+            charsNoSpaces = charsNoSpaces,
+            readMinutes = readMinutes,
+        )
+    }
 
     override fun onCleared() {
         super.onCleared()

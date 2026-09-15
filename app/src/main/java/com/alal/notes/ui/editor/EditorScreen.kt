@@ -156,6 +156,7 @@ fun EditorScreen(
     val note by vm.note.collectAsStateWithLifecycle()
     val noteUnlocked by vm.noteUnlocked.collectAsStateWithLifecycle()
     val stats by vm.stats.collectAsStateWithLifecycle()
+    val statsReady by vm.statsReady.collectAsStateWithLifecycle()
     val selectionStats by vm.selectionStats.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
     val tags by vm.tags.collectAsStateWithLifecycle()
@@ -313,7 +314,7 @@ fun EditorScreen(
                                         onDuplicate = { scope.launch { vm.duplicate()?.let { snackbar.showSnackbar(context.getString(R.string.snackbar_duplicated)) } } },
                                         onArchive = { vm.archive(); onBack() },
                                         onTrash = { vm.trash(); onBack() },
-                                        onDetails = { dialog = Dialog.DETAILS },
+                                        onDetails = { vm.refreshDetailedStats(); dialog = Dialog.DETAILS },
                                         onBackground = { sheet = Sheet.BACKGROUND },
                                         onVersions = { current?.let { onVersions(it.id) } },
                                         onExport = { sheet = Sheet.EXPORT },
@@ -392,6 +393,7 @@ fun EditorScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = cs.onSurfaceVariant,
                             maxLines = 1,
+                            modifier = Modifier.alpha(if (statsReady) 1f else 0f),
                         )
                         Spacer(Modifier.weight(1f))
                         AnimatedVisibility(visible = savedVisible, enter = fadeIn(), exit = fadeOut(tween(600))) {
@@ -403,7 +405,7 @@ fun EditorScreen(
                         }
                     }
                     val goal = current?.wordGoal
-                    if (goal != null && goal > 0) {
+                    if (statsReady && goal != null && goal > 0) {
                         val p = (stats.words.toFloat() / goal).coerceIn(0f, 1f)
                         GoalProgressBar(p, Modifier.fillMaxWidth().padding(horizontal = hPad).height(3.dp), color = if (p >= 1f) cs.tertiary else cs.primary)
                     }
