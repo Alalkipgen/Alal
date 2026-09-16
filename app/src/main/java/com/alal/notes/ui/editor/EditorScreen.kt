@@ -160,6 +160,7 @@ fun EditorScreen(
 
     val note by vm.note.collectAsStateWithLifecycle()
     val noteUnlocked by vm.noteUnlocked.collectAsStateWithLifecycle()
+    val loaded by vm.loaded.collectAsStateWithLifecycle()
     val stats by vm.stats.collectAsStateWithLifecycle()
     val statsReady by vm.statsReady.collectAsStateWithLifecycle()
     val selectionStats by vm.selectionStats.collectAsStateWithLifecycle()
@@ -255,10 +256,12 @@ fun EditorScreen(
     val hPad = when (settings.margin) { MarginMode.NARROW -> 16.dp; MarginMode.NORMAL -> 24.dp; MarginMode.WIDE -> 36.dp }
 
     val chromeAlpha by animateFloatAsState(if (focusMode) 0f else 1f, tween(250), label = "chrome")
-    // The screen slides in immediately; the body fades in as soon as Room has delivered the
-    // note. This replaces the old fixed 400 ms hold before the open animation, which made
-    // every note open feel laggy even though the load itself took only a few milliseconds.
-    val contentAlpha by animateFloatAsState(if (current != null) 1f else 0f, tween(160), label = "content")
+    // The screen slides in immediately and its content is simply not painted until the note
+    // is in the text fields. The previous 160 ms cross-fade - drawn on top of empty
+    // placeholders and the default "No category" / "Draft" chips - is what read as a flash on
+    // every open: the editor appeared blank, then blinked into the real note. Taking the reveal
+    // off the animation clock removes the blink without adding any waiting time.
+    val contentAlpha = if (loaded) 1f else 0f
 
     Box(Modifier.fillMaxSize().then(if (brush != null) Modifier.background(brush) else Modifier.background(bgColor))) {
         PaperTextureBackground(texture, cs.onSurface.copy(alpha = if (dark) 0.10f else 0.08f), Modifier.fillMaxSize())
@@ -269,7 +272,7 @@ fun EditorScreen(
             snackbarHost = { SnackbarHost(snackbar) },
             topBar = {
                 if (!focusMode) {
-                    Column(Modifier.alpha(chromeAlpha)) {
+                    Column(Modifier.alpha(chromeAlpha * contentAlpha)) {
                         TopAppBar(
                             title = {
                                 // Category picker lives in the title slot
@@ -449,6 +452,7 @@ fun EditorScreen(
             EditorBody(
                 vm = vm,
                 settings = settings,
+                loaded = loaded,
                 bodySize = bodySize,
                 bodyFamily = bodyFamily,
                 hPad = hPad,
@@ -581,6 +585,7 @@ private fun UndoRedoButtons(vm: EditorViewModel) {
 private fun EditorBody(
     vm: EditorViewModel,
     settings: Settings,
+    loaded: Boolean,
     bodySize: androidx.compose.ui.unit.TextUnit,
     bodyFamily: androidx.compose.ui.text.font.FontFamily,
     hPad: androidx.compose.ui.unit.Dp,
@@ -695,7 +700,7 @@ private fun EditorBody(
             modifier = Modifier.fillMaxWidth().padding(horizontal = hPad),
             decorator = TextFieldDecorator { inner ->
                 Box {
-                    if (titleEmpty) {
+                    if (loaded && titleEmpty) {
                         Text(
                             stringResource(R.string.title_hint),
                             fontFamily = extras.type.title, fontSize = 26.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold,
@@ -741,7 +746,7 @@ private fun EditorBody(
                 ),
             decorator = TextFieldDecorator { inner ->
                 Box(Modifier.padding(top = 12.dp)) {
-                    if (bodyEmpty) {
+                    if (loaded && bodyEmpty) {
                         Text(
                             stringResource(R.string.body_hint),
                             fontFamily = bodyFamily, fontSize = bodySize, lineHeight = bodySize * settings.lineHeight,

@@ -121,6 +121,14 @@ class EditorViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Per-session unlock for a locked note (reset when the editor is recreated). */
+    /**
+     * True once the open note's text has actually been pushed into the editor fields. The UI
+     * uses it to stay unpainted for the one or two frames Room needs, instead of drawing an
+     * empty editor and then fading the real note in.
+     */
+    private val _loaded = MutableStateFlow(false)
+    val loaded: StateFlow<Boolean> = _loaded
+
     private val _noteUnlocked = MutableStateFlow(false)
     val noteUnlocked: StateFlow<Boolean> = _noteUnlocked
     fun unlockNote() { _noteUnlocked.value = true }
@@ -230,6 +238,7 @@ class EditorViewModel @Inject constructor(
         loadJob?.cancel()
         statsRefreshJob?.cancel()
         _statsReady.value = false
+        _loaded.value = false
         noteId.value = id
         loadJob = viewModelScope.launch {
             val n = repository.getNote(id) ?: return@launch
@@ -245,6 +254,7 @@ class EditorViewModel @Inject constructor(
             goalWasReached = n.wordGoal?.let { it > 0 && n.wordCount >= it } ?: false
             dirty = false
             _noteUnlocked.value = !n.isLocked
+            _loaded.value = true
             // Small notes can fill detailed stats immediately. Long notes keep the persisted
             // summary until the user edits or opens Details, so no CPU-heavy ICU pass races the IME.
             if (n.body.length < LONG_NOTE_CHARS) {
