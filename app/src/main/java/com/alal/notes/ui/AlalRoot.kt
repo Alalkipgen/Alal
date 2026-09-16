@@ -66,10 +66,18 @@ import kotlinx.coroutines.launch
 
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
 
-/** One surface transition, started only after the selected note is ready. */
+/**
+ * Keep Home completely still while the already-composed editor gets its first text layout.
+ * The editor is off-screen during this hold, so its empty/default frame can never flash.
+ */
+private const val OPEN_RENDER_HOLD_MS = 450
 private const val SLIDE_MS = 240
 
-private fun openSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
+private fun openSlideSpec() = tween<IntOffset>(
+    durationMillis = SLIDE_MS,
+    delayMillis = OPEN_RENDER_HOLD_MS,
+    easing = FastOutSlowInEasing,
+)
 
 private fun closeSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
 
@@ -182,8 +190,9 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings, ma
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        // The editor begins only after its note is in the LRU. Do not cross-fade an empty first
-        // frame over Home: one horizontal surface transition is visually stable.
+        // Navigation composes the editor off-screen immediately, then holds Home for 450 ms.
+        // Room/cache delivery, TextFieldState setup and the first long-text layout finish during
+        // that hidden window; only then does the single horizontal slide become visible.
         enterTransition = {
             if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
             else fadeIn(tween(150))
