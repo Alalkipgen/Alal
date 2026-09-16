@@ -5,9 +5,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +36,7 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -115,7 +119,21 @@ fun NoteCard(
     val brush = noteCardBrush(note, dark)
     val bg = noteCardColor(note, dark) ?: cs.surfaceContainer
     val shape = if (settings.cardStyle == CardStyle.SOFT) RoundedCornerShape(20.dp) else RoundedCornerShape(4.dp)
-    val scale by animateFloatAsState(if (selected) 0.97f else 1f, spring(stiffness = Spring.StiffnessMedium), label = "scale")
+    // Water-touch feel: the card dips under the finger, keeps its ripple, and ticks the moment
+    // it is pressed, so the tap is answered before the note has even been read.
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val haptics = rememberHaptics()
+    LaunchedEffect(pressed) { if (pressed) haptics.tick() }
+    val scale by animateFloatAsState(
+        when {
+            selected -> 0.97f
+            pressed -> 0.98f
+            else -> 1f
+        },
+        spring(stiffness = Spring.StiffnessMedium),
+        label = "scale",
+    )
     val borderColor by animateColorAsState(if (selected) cs.primary else Color.Transparent, label = "border")
     val is24 = rememberIs24Hour()
     val title = remember(note.title, note.body) { AutoTitle.from(note.title, note.body) }
@@ -129,7 +147,12 @@ fun NoteCard(
             .clip(shape)
             .then(if (brush != null) Modifier.background(brush) else Modifier.background(bg))
             .border(2.dp, borderColor, shape)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
     ) {
         Row {
             // 4dp category strip

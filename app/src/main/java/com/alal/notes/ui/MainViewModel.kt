@@ -33,6 +33,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Reads a note before its editor is shown. Navigating only after this returns means the
+     * editor's first frame already carries the text, instead of drawing an empty page and
+     * filling it a frame or two later (the "flash" when opening a note).
+     */
+    suspend fun prefetch(noteId: Long) {
+        repository.getNote(noteId)
+    }
+
     /** Creates an empty note (optionally from a template) and returns its id. */
     suspend fun createNote(templateBody: String = "", categoryId: Long? = null): Long =
         repository.createNote(templateBody, categoryId, settings.value.wordCountMethod)

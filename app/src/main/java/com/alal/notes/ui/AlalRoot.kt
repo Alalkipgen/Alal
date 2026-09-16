@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -61,6 +62,8 @@ import com.alal.notes.ui.settings.AppearanceScreen
 import com.alal.notes.ui.settings.EditorSettingsScreen
 import com.alal.notes.ui.settings.SettingsScreen
 import com.alal.notes.ui.versions.VersionsScreen
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
 
@@ -72,6 +75,13 @@ private data class Tab(val route: Route, val label: Int, val icon: ImageVector, 
  * slide itself.
  */
 private const val SLIDE_MS = 240
+
+/**
+ * Longest the UI waits for the tapped note to be read before it starts the slide anyway. It sits
+ * well under the ~100 ms that still reads as "instant", so a cold database can never turn the
+ * open into a visible stall.
+ */
+private const val OPEN_PREFETCH_CAP_MS = 120L
 
 private fun openSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
 
@@ -127,7 +137,7 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
     // vertically and then slid left. Tabs now reserve their own fixed bar space; the complete
     // Home screen (including Write) therefore travels right-to-left as one stable surface.
     Box(Modifier.fillMaxSize()) {
-        AlalNavHost(navController, settings)
+        AlalNavHost(navController, settings, mainVm)
         if (showBar) {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -170,8 +180,17 @@ private fun TabSurface(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun AlalNavHost(navController: NavHostController, settings: Settings) {
-    val openNote: (Long) -> Unit = { id -> navController.navigate(Route.Editor(id)) }
+private fun AlalNavHost(navController: NavHostController, settings: Settings, mainVm: MainViewModel) {
+    val scope = rememberCoroutineScope()
+    // Read the note first (normally a few milliseconds), then slide. The tapped card stays
+    // pressed while that happens, so the wait is covered by touch feedback instead of an empty
+    // editor frame that has to be filled in afterwards.
+    val openNote: (Long) -> Unit = { id ->
+        scope.launch {
+            withTimeoutOrNull(OPEN_PREFETCH_CAP_MS) { mainVm.prefetch(id) }
+            navController.navigate(Route.Editor(id))
+        }
+    }
     val back: () -> Unit = { navController.popBackStack() }
 
     NavHost(
