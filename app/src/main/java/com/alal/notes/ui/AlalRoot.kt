@@ -63,25 +63,11 @@ import com.alal.notes.ui.settings.EditorSettingsScreen
 import com.alal.notes.ui.settings.SettingsScreen
 import com.alal.notes.ui.versions.VersionsScreen
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
 
-/**
- * Opening a note starts moving immediately. The old 400 ms "preparation" hold (added so the
- * editor's first empty frame never slid in before Room delivered the text) made every open feel
- * like a ~600 ms lag. The editor now fades its content in once the note is loaded instead
- * (see EditorScreen), so the surfaces can move right away and the total open time is just the
- * slide itself.
- */
+/** One surface transition, started only after the selected note is ready. */
 private const val SLIDE_MS = 240
-
-/**
- * Longest the UI waits for the tapped note to be read before it starts the slide anyway. It sits
- * well under the ~100 ms that still reads as "instant", so a cold database can never turn the
- * open into a visible stall.
- */
-private const val OPEN_PREFETCH_CAP_MS = 120L
 
 private fun openSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
 
@@ -109,7 +95,7 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
         when {
             action == MainActivity.ACTION_NEW_NOTE -> {
                 val id = mainVm.createNote()
-                navController.navigate(Route.Editor(id))
+                if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
                 onActionConsumed()
             }
             action == MainActivity.ACTION_SEARCH -> {
@@ -117,7 +103,9 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
                 onActionConsumed()
             }
             action.startsWith(openPrefix) -> {
-                action.removePrefix(openPrefix).toLongOrNull()?.let { id -> navController.navigate(Route.Editor(id)) }
+                action.removePrefix(openPrefix).toLongOrNull()?.let { id ->
+                    if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
+                }
                 onActionConsumed()
             }
         }
@@ -182,13 +170,11 @@ private fun TabSurface(content: @Composable () -> Unit) {
 @Composable
 private fun AlalNavHost(navController: NavHostController, settings: Settings, mainVm: MainViewModel) {
     val scope = rememberCoroutineScope()
-    // Read the note first (normally a few milliseconds), then slide. The tapped card stays
-    // pressed while that happens, so the wait is covered by touch feedback instead of an empty
-    // editor frame that has to be filled in afterwards.
+    // Hybrid open: recent/visible notes hit the bounded memory cache; a cold note is read on
+    // demand. Navigation never outruns that work, while the card's press/ripple covers the wait.
     val openNote: (Long) -> Unit = { id ->
         scope.launch {
-            withTimeoutOrNull(OPEN_PREFETCH_CAP_MS) { mainVm.prefetch(id) }
-            navController.navigate(Route.Editor(id))
+            if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
         }
     }
     val back: () -> Unit = { navController.popBackStack() }
@@ -196,10 +182,10 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings, ma
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        // Both complete surfaces move together as soon as the note is tapped; a short fade on the
-        // incoming editor softens the first frame. Back navigation mirrors it.
+        // The editor begins only after its note is in the LRU. Do not cross-fade an empty first
+        // frame over Home: one horizontal surface transition is visually stable.
         enterTransition = {
-            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec()) + fadeIn(tween(SLIDE_MS / 2))
+            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
             else fadeIn(tween(150))
         },
         exitTransition = {
@@ -248,7 +234,7 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings, ma
             TagsScreen(onOpenTag = { id -> navController.navigate(Route.NoteList(ListKind.TAG, id)) }, onBack = back)
         }
         composable<Route.Templates> {
-            TemplatesScreen(onBack = back, onCreated = { id -> navController.navigate(Route.Editor(id)) })
+            TemplatesScreen(onBack = back, onCreated = openNote)
         }
         composable<Route.Appearance> { AppearanceScreen(settings = settings, onBack = back) }
         composable<Route.EditorSettings> { EditorSettingsScreen(settings = settings, onBack = back) }

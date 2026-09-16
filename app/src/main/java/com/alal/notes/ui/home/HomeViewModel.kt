@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,7 +45,7 @@ class HomeViewModel @Inject constructor(
     private val selection = MutableStateFlow<Set<Long>>(emptySet())
 
     val state: StateFlow<HomeUiState> = combine(
-        repository.observeActive(),
+        repository.observeActive().onEach(repository::warmOpenCache),
         repository.observeCategories(),
         categoryFilter,
         selection,

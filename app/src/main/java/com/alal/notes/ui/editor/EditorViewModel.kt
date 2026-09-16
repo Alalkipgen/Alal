@@ -97,6 +97,7 @@ class EditorViewModel @Inject constructor(
 
     private companion object {
         const val LONG_NOTE_CHARS = 16_000
+        const val INITIAL_SCRIPT_SAMPLE_CHARS = 2_048
         const val LONG_NOTE_STATS_DEBOUNCE_MS = 900L
     }
 
@@ -576,12 +577,17 @@ class EditorViewModel @Inject constructor(
     private fun seedStats(note: Note): TextStats {
         val words = note.wordCount.coerceAtLeast(0)
         val chars = note.charCount.coerceAtLeast(0)
-        var charsNoSpaces = 0
+        // Only sample enough text to choose the script-specific reading speed. Walking an
+        // entire long note here blocked the main thread during the opening transition.
+        val sampleLength = minOf(note.body.length, INITIAL_SCRIPT_SAMPLE_CHARS)
+        var sampledNoSpaces = 0
         var hasMyanmar = false
-        for (c in note.body) {
-            if (!c.isWhitespace()) charsNoSpaces++
+        for (i in 0 until sampleLength) {
+            val c = note.body[i]
+            if (!c.isWhitespace()) sampledNoSpaces++
             if (!hasMyanmar && isMyanmarChar(c)) hasMyanmar = true
         }
+        val charsNoSpaces = if (sampleLength == note.body.length) sampledNoSpaces else chars
         val myanmarWords = if (hasMyanmar) words else 0
         val latinWords = words - myanmarWords
         val readMinutes = if (words == 0) 0 else {

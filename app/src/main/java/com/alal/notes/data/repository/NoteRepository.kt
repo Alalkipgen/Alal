@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.collections.LinkedHashMap
 import kotlin.math.abs
 
 @Singleton
@@ -36,6 +37,33 @@ class NoteRepository @Inject constructor(
     private val dailyStatDao: DailyStatDao,
     private val wordCounter: WordCounter,
 ) {
+    // A bounded open cache: enough for the visible/recent cards, never every note body.
+    // Access order makes this an LRU, and the lock keeps Home warm-up and editor reads safe.
+    private val openCacheLock = Any()
+    private val openCache = object : LinkedHashMap<Long, Note>(OPEN_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Note>?): Boolean =
+            size > OPEN_CACHE_SIZE
+    }
+
+    fun warmOpenCache(notes: List<Note>) {
+        synchronized(openCacheLock) {
+            notes.take(OPEN_CACHE_SIZE).forEach { openCache[it.id] = it }
+        }
+    }
+
+    fun peekOpenCache(id: Long): Note? = synchronized(openCacheLock) { openCache[id] }
+
+    private fun cacheOpenNote(note: Note): Note {
+        synchronized(openCacheLock) { openCache[note.id] = note }
+        return note
+    }
+
+    /** Fetches only on an LRU miss; callers navigate after this returns. */
+    suspend fun prepareForOpen(id: Long): Note? {
+        peekOpenCache(id)?.let { return it }
+        return withContext(Dispatchers.IO) { noteDao.getById(id) }?.let(::cacheOpenNote)
+    }
+
     // ---- observe ----
     fun observeActive(): Flow<List<Note>> = noteDao.observeActive()
     fun observePinned(): Flow<List<Note>> = noteDao.observePinned()
@@ -53,7 +81,7 @@ class NoteRepository @Inject constructor(
     fun observeAllNoteTags(): Flow<List<NoteTagCrossRef>> = noteDao.observeAllNoteTags()
     fun observeTemplates(): Flow<List<Template>> = templateDao.observeAll()
 
-    suspend fun getNote(id: Long): Note? = noteDao.getById(id)
+    suspend fun getNote(id: Long): Note? = prepareForOpen(id)
     suspend fun getTemplate(id: Long): Template? = templateDao.getById(id)
 
     // ---- create / save ----
@@ -76,7 +104,7 @@ class NoteRepository @Inject constructor(
             updatedAt = System.currentTimeMillis(),
         )
         noteDao.update(updated)
-        updated
+        cacheOpenNote(updated)
     }
 
     /**
@@ -186,6 +214,7 @@ class NoteRepository @Inject constructor(
     fun observeDailyStats(): Flow<List<DailyStat>> = dailyStatDao.observeRecent()
 
     companion object {
+        private const val OPEN_CACHE_SIZE = 16
         const val MAX_VERSIONS_PER_NOTE = 50
         /** A big paste/delete always earns a snapshot... */
         const val SNAPSHOT_MIN_CHARS = 1000
