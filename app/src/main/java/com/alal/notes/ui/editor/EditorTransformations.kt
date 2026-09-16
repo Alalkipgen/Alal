@@ -118,7 +118,14 @@ class MarkdownOutputTransformation(
         val text = asCharSequence()
         val n = text.length
         if (n == 0 || n > STYLE_LIMIT) return
-        val syntax = SpanStyle(color = muted.copy(alpha = 0.55f))
+        // Keep Markdown in storage for reliable editing/export, but collapse its inline syntax
+        // visually. A near-zero transparent span preserves the raw offset mapping used by the
+        // state-based text field while making markers and link destinations effectively absent.
+        val syntax = SpanStyle(
+            color = Color.Transparent,
+            fontSize = 0.01.sp,
+            letterSpacing = 0.sp,
+        )
 
         // --- block level: iterate over lines
         var lineStart = 0
@@ -257,7 +264,8 @@ class MarkdownOutputTransformation(
             if (rb > lb + 1 && !text.subSequence(lb, close).contains('\n')) {
                 addStyle(syntax, lb, lb + 1)
                 addStyle(SpanStyle(color = accent, textDecoration = TextDecoration.Underline), lb + 1, rb)
-                addStyle(syntax.copy(color = accent.copy(alpha = 0.6f)), rb, close + 1)
+                // Hide the closing bracket, parentheses and URL; only the linked label remains.
+                addStyle(syntax, rb, close + 1)
             }
             i = close + 1
         }
