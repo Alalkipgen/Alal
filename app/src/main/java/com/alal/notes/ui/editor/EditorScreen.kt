@@ -185,6 +185,8 @@ fun EditorScreen(
     var categoryMenu by remember { mutableStateOf(false) }
     var confetti by remember { mutableIntStateOf(0) }
     var savedVisible by remember { mutableStateOf(false) }
+    var linkActions by remember { mutableStateOf<MarkdownLinkTarget?>(null) }
+    var editingLink by remember { mutableStateOf<MarkdownLinkTarget?>(null) }
 
     // Saving lifecycle
     BackHandler(enabled = reading) { reading = false }
@@ -442,6 +444,12 @@ fun EditorScreen(
                 bodyFamily = bodyFamily,
                 hPad = hPad,
                 focusMode = focusMode,
+                onOpenLink = { link ->
+                    if (!openExternalLink(context, link.url)) {
+                        scope.launch { snackbar.showSnackbar("Unable to open link") }
+                    }
+                },
+                onLinkLongPress = { linkActions = it },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
@@ -514,6 +522,39 @@ fun EditorScreen(
             onSet = { at -> vm.setReminder(at); dialog = Dialog.NONE },
         )
     }
+
+    linkActions?.let { link ->
+        MarkdownLinkActionsDialog(
+            link = link,
+            onDismiss = { linkActions = null },
+            onOpen = {
+                linkActions = null
+                if (!openExternalLink(context, link.url)) {
+                    scope.launch { snackbar.showSnackbar("Unable to open link") }
+                }
+            },
+            onEdit = { linkActions = null; editingLink = link },
+            onCopy = {
+                copyLink(context, link.url)
+                linkActions = null
+                scope.launch { snackbar.showSnackbar("Link copied") }
+            },
+            onRemove = {
+                replaceMarkdownLink(vm.bodyState, link, link.label, null)
+                linkActions = null
+            },
+        )
+    }
+    editingLink?.let { link ->
+        EditMarkdownLinkDialog(
+            link = link,
+            onDismiss = { editingLink = null },
+            onSave = { label, url ->
+                replaceMarkdownLink(vm.bodyState, link, label, url)
+                editingLink = null
+            },
+        )
+    }
 }
 
 @Composable
@@ -534,6 +575,8 @@ private fun EditorBody(
     bodyFamily: androidx.compose.ui.text.font.FontFamily,
     hPad: androidx.compose.ui.unit.Dp,
     focusMode: Boolean,
+    onOpenLink: (MarkdownLinkTarget) -> Unit,
+    onLinkLongPress: (MarkdownLinkTarget) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val extras = Alal.extras
@@ -678,7 +721,14 @@ private fun EditorBody(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = hPad)
-                .onSizeChanged { viewportH = it.height },
+                .onSizeChanged { viewportH = it.height }
+                .markdownLinkGestures(
+                    text = { vm.bodyState.text },
+                    layout = { layout },
+                    scrollY = { scroll.value },
+                    onOpen = onOpenLink,
+                    onLongPress = onLinkLongPress,
+                ),
             decorator = TextFieldDecorator { inner ->
                 Box(Modifier.padding(top = 12.dp)) {
                     if (bodyEmpty) {
