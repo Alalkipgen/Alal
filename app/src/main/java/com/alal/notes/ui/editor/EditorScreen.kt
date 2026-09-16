@@ -908,4 +908,19 @@ private fun EditorOverflowMenu(
             )
         }
         Item(R.string.focus_mode, Icons.Rounded.CenterFocusStrong, onClick = onFocus)
-        
+        Item(R.string.find_replace, Icons.Rounded.FindReplace, onClick = onFind)
+        Item(R.string.change_status, null, onClick = onStatus)
+        Item(R.string.apply_template, null, onClick = onTemplate)
+        Item(R.string.background, Icons.Rounded.Palette, onClick = onBackground)
+        Item(R.string.duplicate, Icons.Rounded.ContentCopy, onClick = onDuplicate)
+        Item(R.string.details, Icons.Rounded.Info, onClick = onDetails)
+        HorizontalDivider()
+        Item(R.string.export, Icons.Rounded.FileDownload, onClick = onExport)
+        Item(R.string.reading_mode, Icons.AutoMirrored.Rounded.MenuBook, onClick = onReading)
+        Item(R.string.version_history, Icons.Rounded.History, onClick = onVersions)
+        Item(R.string.outline, Icons.AutoMirrored.Rounded.FormatListBulleted, onClick = onOutline)
+        HorizontalDivider()
+        Item(R.string.archive, Icons.Rounded.Archive, tint = ActionColors.archive, onClick = onArchive)
+        Item(R.string.trash, Icons.Rounded.Delete, tint = ActionColors.trash, onClick = onTrash)
+    }
+}
