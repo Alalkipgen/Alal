@@ -1,0 +1,52 @@
+name: Smooth editor open
+
+on:
+  push:
+    paths:
+      - "scripts/smooth_editor_open.py"
+      - ".github/workflows/smooth-editor-open.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Apply patch
+        run: python3 scripts/smooth_editor_open.py
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "perf: open notes without the fade-in flash"
+            git push
+          else
+            echo "no changes"
+          fi
+
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v4.0.1
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
+      - name: Build
+        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
+
+      - name: Mark build ok
+        run: |
+          git pull --rebase
+          date -u +%Y-%m-%dT%H:%M:%SZ > .editor-smooth-build-ok
+          git add .editor-smooth-build-ok
+          git commit -m "test: verify editor open patch build"
+          git push
