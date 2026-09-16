@@ -65,19 +65,15 @@ import com.alal.notes.ui.versions.VersionsScreen
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
 
 /**
- * Keep the note list completely still for a short preparation window while the editor is
- * composed off-screen and Room hydrates its TextFieldState. Without this window the editor's
- * first empty frame could slide on-screen before the note text arrived, which looked like a
- * flash or dropped frame even though navigation itself was fast.
+ * Opening a note starts moving immediately. The old 400 ms "preparation" hold (added so the
+ * editor's first empty frame never slid in before Room delivered the text) made every open feel
+ * like a ~600 ms lag. The editor now fades its content in once the note is loaded instead
+ * (see EditorScreen), so the surfaces can move right away and the total open time is just the
+ * slide itself.
  */
-private const val OPEN_PREPARE_MS = 400
-private const val SLIDE_MS = 220
+private const val SLIDE_MS = 240
 
-private fun openSlideSpec() = tween<IntOffset>(
-    durationMillis = SLIDE_MS,
-    delayMillis = OPEN_PREPARE_MS,
-    easing = FastOutSlowInEasing,
-)
+private fun openSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
 
 private fun closeSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
 
@@ -181,11 +177,10 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings) {
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        // On open, hold the list for OPEN_PREPARE_MS while the editor composes off-screen and
-        // loads its note. Then move both complete surfaces together. Back navigation remains
-        // immediate, so the preparation delay is paid only when opening a note.
+        // Both complete surfaces move together as soon as the note is tapped; a short fade on the
+        // incoming editor softens the first frame. Back navigation mirrors it.
         enterTransition = {
-            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
+            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec()) + fadeIn(tween(SLIDE_MS / 2))
             else fadeIn(tween(150))
         },
         exitTransition = {

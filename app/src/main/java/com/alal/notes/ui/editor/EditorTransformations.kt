@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import com.alal.notes.domain.markdown.MarkdownSpans
 import com.alal.notes.domain.markdown.MarkdownToggle
 import kotlin.math.abs
 
@@ -80,8 +81,15 @@ fun Modifier.pinchToZoom(onZoom: (Float) -> Unit): Modifier = pointerInput(onZoo
 
 /**
  * Live inline Markdown styling (headings, bold, italic, underline, strikethrough, highlight,
- * inline code, quotes) drawn on top of the raw text, plus optional paragraph focus dimming.
- * The buffer text itself is never modified, so offsets stay identical to the stored note.
+ * inline code, links, quotes, list markers) drawn on top of the raw text, plus optional
+ * paragraph-focus dimming. The buffer text itself is never modified, so offsets stay identical
+ * to the stored note.
+ *
+ * The ranges come from [MarkdownSpans], a single allocation-light pass over the text, and are
+ * cached against the last seen text. Re-running the transformation for a caret move, focus
+ * change or IME round-trip therefore costs one `contentEquals` walk instead of a rescan, and
+ * long notes are styled in full: the previous 8 000-character inline cut-off (which left raw
+ * `**`, `++`, `*` symbols visible in long notes) is gone.
  */
 @OptIn(ExperimentalFoundationApi::class)
 class MarkdownOutputTransformation(
@@ -103,183 +111,100 @@ class MarkdownOutputTransformation(
     var cursor: Int by mutableIntStateOf(initialCursor)
 
     private companion object {
-        /** Keep focus/IME changes cheap on long notes by avoiding full-buffer span work. */
-        const val STYLE_LIMIT = 20_000
-
         /**
-         * Inline markers are the expensive half (five full scans plus a span per match), so they
-         * stop earlier than block styling. Long notes keep heading / list / quote colouring and
-         * stay responsive while typing.
+         * Safety valve only. Styling a note this large is still cheap for the scanner, but the
+         * text layout itself becomes the bottleneck long before, so beyond this we render plain.
          */
-        const val INLINE_LIMIT = 8_000
+        const val STYLE_LIMIT = 400_000
+    }
+
+    // One SpanStyle per kind, created once. Keep Markdown in storage for reliable editing and
+    // export, but collapse its inline syntax visually: a near-zero transparent span preserves
+    // the raw offset mapping used by the state-based text field while making markers and link
+    // destinations effectively absent.
+    private val styles: Array<SpanStyle?> = Array(MarkdownSpans.KIND_COUNT) { kind ->
+        when (kind) {
+            MarkdownSpans.SYNTAX -> SpanStyle(color = Color.Transparent, fontSize = 0.01.sp, letterSpacing = 0.sp)
+            MarkdownSpans.BOLD -> SpanStyle(fontWeight = FontWeight.Bold)
+            MarkdownSpans.ITALIC -> SpanStyle(fontStyle = FontStyle.Italic)
+            MarkdownSpans.UNDERLINE -> SpanStyle(textDecoration = TextDecoration.Underline)
+            MarkdownSpans.STRIKE -> SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted)
+            MarkdownSpans.HIGHLIGHT -> SpanStyle(background = highlight)
+            MarkdownSpans.CODE -> SpanStyle(fontFamily = FontFamily.Monospace, background = muted.copy(alpha = 0.12f))
+            MarkdownSpans.LINK -> SpanStyle(color = accent, textDecoration = TextDecoration.Underline)
+            MarkdownSpans.H1 -> heading(bodySize * 1.5f)
+            MarkdownSpans.H2 -> heading(bodySize * 1.3f)
+            MarkdownSpans.H3 -> heading(bodySize * 1.15f)
+            MarkdownSpans.H1_MARK -> headingMark(bodySize * 1.5f)
+            MarkdownSpans.H2_MARK -> headingMark(bodySize * 1.3f)
+            MarkdownSpans.H3_MARK -> headingMark(bodySize * 1.15f)
+            MarkdownSpans.QUOTE_MARK -> SpanStyle(color = accent, fontWeight = FontWeight.Bold)
+            MarkdownSpans.QUOTE_TEXT -> SpanStyle(fontStyle = FontStyle.Italic, color = muted)
+            MarkdownSpans.LIST_MARK -> SpanStyle(color = accent, fontWeight = FontWeight.Bold)
+            MarkdownSpans.ORDERED_MARK -> SpanStyle(color = accent, fontWeight = FontWeight.SemiBold)
+            MarkdownSpans.CHECK_MARK -> SpanStyle(color = accent, fontWeight = FontWeight.Bold)
+            MarkdownSpans.CHECK_DONE -> SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted)
+            MarkdownSpans.RULE -> SpanStyle(color = muted.copy(alpha = 0.5f), letterSpacing = 4.sp)
+            else -> null
+        }
+    }
+    private val dim = SpanStyle(color = onSurface.copy(alpha = 0.35f))
+
+    private fun heading(size: TextUnit) = SpanStyle(fontFamily = titleFont, fontWeight = FontWeight.Bold, fontSize = size)
+    private fun headingMark(size: TextUnit) = SpanStyle(color = muted.copy(alpha = 0.5f), fontSize = size * 0.8f)
+
+    // Cache of the last scanned text. Output transformations run on the main thread only.
+    private var cachedText: String? = null
+    private var cachedSpans: MarkdownSpans.SpanList = MarkdownSpans.SpanList()
+
+    private fun spansFor(text: CharSequence): MarkdownSpans.SpanList {
+        val cached = cachedText
+        if (cached != null && cached.length == text.length && text.contentEquals(cached)) return cachedSpans
+        val value = text.toString()
+        cachedSpans = MarkdownSpans.scan(value, cachedSpans)
+        cachedText = value
+        return cachedSpans
     }
 
     override fun TextFieldBuffer.transformOutput() {
         val text = asCharSequence()
         val n = text.length
         if (n == 0 || n > STYLE_LIMIT) return
-        // Keep Markdown in storage for reliable editing/export, but collapse its inline syntax
-        // visually. A near-zero transparent span preserves the raw offset mapping used by the
-        // state-based text field while making markers and link destinations effectively absent.
-        val syntax = SpanStyle(
-            color = Color.Transparent,
-            fontSize = 0.01.sp,
-            letterSpacing = 0.sp,
-        )
 
-        // --- block level: iterate over lines
-        var lineStart = 0
-        var focusStart = -1
-        var focusEnd = -1
-        while (lineStart <= n) {
-            var lineEnd = lineStart
-            while (lineEnd < n && text[lineEnd] != '\n') lineEnd++
-            // No substring/toString here: the old code allocated a String per line on every
-            // output pass, which is what made typing in a long note stutter.
-            val len = lineEnd - lineStart
-            when {
-                text.has(lineStart, lineEnd, "### ") -> heading(lineStart, lineEnd, 4, bodySize * 1.15f)
-                text.has(lineStart, lineEnd, "## ") -> heading(lineStart, lineEnd, 3, bodySize * 1.3f)
-                text.has(lineStart, lineEnd, "# ") -> heading(lineStart, lineEnd, 2, bodySize * 1.5f)
-                text.has(lineStart, lineEnd, "> ") -> {
-                    addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 1)
-                    addStyle(SpanStyle(fontStyle = FontStyle.Italic, color = muted), lineStart + 2, lineEnd)
-                }
-                text.has(lineStart, lineEnd, "- [") && len >= 6 && text[lineStart + 4] == ']' && text[lineStart + 5] == ' ' -> {
-                    val mark = text[lineStart + 3]
-                    if (mark == ' ' || mark == 'x' || mark == 'X') {
-                        addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 5)
-                        if (mark != ' ') {
-                            addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted), lineStart + 6, lineEnd)
-                        }
-                    }
-                }
-                text.has(lineStart, lineEnd, "- ") || text.has(lineStart, lineEnd, "* ") ->
-                    addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold), lineStart, lineStart + 1)
-                len == 3 && (text.has(lineStart, lineEnd, "---") || text.has(lineStart, lineEnd, "***")) ->
-                    addStyle(SpanStyle(color = muted.copy(alpha = 0.5f), letterSpacing = 4.sp), lineStart, lineEnd)
-                else -> {
-                    // "1. ", "12. ", "123. " ordered-list markers
-                    var d = 0
-                    while (d < 3 && lineStart + d < lineEnd && text[lineStart + d].isDigit()) d++
-                    if (d in 1..3 && lineStart + d + 1 < lineEnd && text[lineStart + d] == '.' && text[lineStart + d + 1] == ' ') {
-                        addStyle(SpanStyle(color = accent, fontWeight = FontWeight.SemiBold), lineStart, lineStart + d + 1)
-                    }
-                }
-            }
-            if (paragraphFocus && focusStart < 0 && cursor >= lineStart && cursor <= lineEnd) {
-                // Expand to paragraph boundaries (blank lines)
-                var ps = lineStart
+        val spans = spansFor(text)
+        val kindStyles = styles
+        for (i in 0 until spans.size) {
+            val style = kindStyles[spans.kind(i)] ?: continue
+            val start = spans.start(i)
+            val end = spans.end(i)
+            if (start < 0 || end > n || start >= end) continue
+            addStyle(style, start, end)
+        }
+
+        if (paragraphFocus) {
+            val at = cursor
+            if (at in 0..n) {
+                // Expand to paragraph boundaries (blank lines) around the caret.
+                var ps = at
+                while (ps > 0 && text[ps - 1] != '\n') ps--
                 while (ps > 0) {
-                    val prevEnd = ps - 1
-                    var prevStart = prevEnd
+                    var prevStart = ps - 1
                     while (prevStart > 0 && text[prevStart - 1] != '\n') prevStart--
-                    if (prevStart == prevEnd) break
+                    if (prevStart == ps - 1) break // previous line is empty
                     ps = prevStart
                 }
-                var pe = lineEnd
+                var pe = at
+                while (pe < n && text[pe] != '\n') pe++
                 while (pe < n) {
                     var nextEnd = pe + 1
                     val nextStart = nextEnd
                     while (nextEnd < n && text[nextEnd] != '\n') nextEnd++
-                    if (nextStart == nextEnd) break
+                    if (nextStart == nextEnd) break // next line is empty
                     pe = nextEnd
                 }
-                focusStart = ps; focusEnd = pe
-            }
-            lineStart = lineEnd + 1
-        }
-
-        // --- inline level (skipped for very large notes so scrolling stays smooth)
-        if (n <= INLINE_LIMIT) {
-            inline(text, "**", SpanStyle(fontWeight = FontWeight.Bold), syntax)
-            inline(text, "==", SpanStyle(background = highlight), syntax)
-            inline(text, "++", SpanStyle(textDecoration = TextDecoration.Underline), syntax)
-            inline(text, "~~", SpanStyle(textDecoration = TextDecoration.LineThrough, color = muted), syntax)
-            inline(text, "`", SpanStyle(fontFamily = FontFamily.Monospace, background = muted.copy(alpha = 0.12f)), syntax)
-            singleStarItalic(text, syntax)
-            links(text, syntax)
-        }
-
-        if (paragraphFocus && focusStart >= 0) {
-            val dim = SpanStyle(color = onSurface.copy(alpha = 0.35f))
-            if (focusStart > 0) addStyle(dim, 0, focusStart)
-            if (focusEnd < n) addStyle(dim, focusEnd, n)
-        }
-    }
-
-    private fun TextFieldBuffer.heading(start: Int, end: Int, prefixLen: Int, size: TextUnit) {
-        addStyle(SpanStyle(color = muted.copy(alpha = 0.5f), fontSize = size * 0.8f), start, minOf(start + prefixLen, end))
-        addStyle(SpanStyle(fontFamily = titleFont, fontWeight = FontWeight.Bold, fontSize = size), start, end)
-    }
-
-    private fun TextFieldBuffer.inline(text: CharSequence, marker: String, style: SpanStyle, syntax: SpanStyle) {
-        var i = 0
-        val m = marker.length
-        val n = text.length
-        while (i < n) {
-            val open = indexOf(text, marker, i)
-            if (open < 0) break
-            val close = indexOf(text, marker, open + m)
-            if (close < 0) break
-            if (close > open + m && !text.subSequence(open + m, close).contains('\n')) {
-                addStyle(syntax, open, open + m)
-                addStyle(style, open + m, close)
-                addStyle(syntax, close, close + m)
-                i = close + m
-            } else {
-                i = open + m
+                if (ps > 0) addStyle(dim, 0, ps)
+                if (pe < n) addStyle(dim, pe, n)
             }
         }
-    }
-
-    /** Italic via single `*` that is not part of `**`. */
-    private fun TextFieldBuffer.singleStarItalic(text: CharSequence, syntax: SpanStyle) {
-        val n = text.length
-        var i = 0
-        var open = -1
-        while (i < n) {
-            val c = text[i]
-            if (c == '*') {
-                if (i + 1 < n && text[i + 1] == '*') { i += 2; continue }
-                if (open < 0) open = i
-                else if (i > open + 1) {
-                    addStyle(syntax, open, open + 1)
-                    addStyle(SpanStyle(fontStyle = FontStyle.Italic), open + 1, i)
-                    addStyle(syntax, i, i + 1)
-                    open = -1
-                } else open = i
-            } else if (c == '\n') open = -1
-            i++
-        }
-    }
-
-    private fun TextFieldBuffer.links(text: CharSequence, syntax: SpanStyle) {
-        var i = 0
-        val n = text.length
-        while (i < n) {
-            val lb = indexOf(text, "[", i); if (lb < 0) break
-            val rb = indexOf(text, "](", lb + 1); if (rb < 0) break
-            val close = indexOf(text, ")", rb + 2); if (close < 0) break
-            if (rb > lb + 1 && !text.subSequence(lb, close).contains('\n')) {
-                addStyle(syntax, lb, lb + 1)
-                addStyle(SpanStyle(color = accent, textDecoration = TextDecoration.Underline), lb + 1, rb)
-                // Hide the closing bracket, parentheses and URL; only the linked label remains.
-                addStyle(syntax, rb, close + 1)
-            }
-            i = close + 1
-        }
-    }
-
-    /** Allocation-free `startsWith` for the line that spans [start, end). */
-    private fun CharSequence.has(start: Int, end: Int, prefix: String): Boolean {
-        if (end - start < prefix.length) return false
-        for (i in prefix.indices) if (this[start + i] != prefix[i]) return false
-        return true
-    }
-
-    private fun indexOf(text: CharSequence, needle: String, from: Int): Int {
-        if (from >= text.length) return -1
-        return text.indexOf(needle, from)
     }
 }

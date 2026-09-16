@@ -36,6 +36,8 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldDecorator
@@ -86,6 +88,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -101,6 +104,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Brush
@@ -125,6 +129,7 @@ import com.alal.notes.data.prefs.Settings
 import com.alal.notes.domain.model.MarginMode
 import com.alal.notes.domain.model.NoteStatus
 import com.alal.notes.domain.model.PaperTexture
+import com.alal.notes.domain.markdown.MarkdownSpans
 import com.alal.notes.ui.components.ConfettiBurst
 import com.alal.notes.ui.components.GoalProgressBar
 import com.alal.notes.ui.components.PaperTextureBackground
@@ -250,6 +255,10 @@ fun EditorScreen(
     val hPad = when (settings.margin) { MarginMode.NARROW -> 16.dp; MarginMode.NORMAL -> 24.dp; MarginMode.WIDE -> 36.dp }
 
     val chromeAlpha by animateFloatAsState(if (focusMode) 0f else 1f, tween(250), label = "chrome")
+    // The screen slides in immediately; the body fades in as soon as Room has delivered the
+    // note. This replaces the old fixed 400 ms hold before the open animation, which made
+    // every note open feel laggy even though the load itself took only a few milliseconds.
+    val contentAlpha by animateFloatAsState(if (current != null) 1f else 0f, tween(160), label = "content")
 
     Box(Modifier.fillMaxSize().then(if (brush != null) Modifier.background(brush) else Modifier.background(bgColor))) {
         PaperTextureBackground(texture, cs.onSurface.copy(alpha = if (dark) 0.10f else 0.08f), Modifier.fillMaxSize())
@@ -341,7 +350,7 @@ fun EditorScreen(
                                         DropdownMenuItem(
                                             text = { Text(s.label()) },
                                             leadingIcon = { Box(Modifier.size(10.dp).background(s.color(dark), MaterialTheme.shapes.extraSmall)) },
-                                            onClick = { statusMenu = false; haptics.tick(); vm.setStatus(s) },
+                                            onClick = { statusMenu = false; haptics.select(); vm.setStatus(s) },
                                         )
                                     }
                                 }
@@ -453,9 +462,10 @@ fun EditorScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .alpha(contentAlpha)
                     .pinchToZoom { zoom ->
                         val next = (localSize * zoom).roundToInt().coerceIn(14, 30)
-                        if (next != localSize) { localSize = next; haptics.tick(); vm.setFontSizeOverride(next) }
+                        if (next != localSize) { localSize = next; haptics.step(); vm.setFontSizeOverride(next) }
                     },
             )
         }
@@ -763,30 +773,74 @@ private fun EditorToolbar(
 ) {
     val cs = MaterialTheme.colorScheme
     val haptics = rememberHaptics()
-    Surface(color = cs.surfaceContainer.copy(alpha = 0.96f), tonalElevation = 3.dp, modifier = modifier) {
+    // Which inline styles surround the caret. Only the caret's line is scanned, and the derived
+    // value changes only when the flag set changes, so typing inside plain text never
+    // recomposes the toolbar.
+    val inlineState by remember(vm) {
+        derivedStateOf { MarkdownSpans.inlineStateAt(vm.bodyState.text, vm.bodyState.selection.start) }
+    }
+    val boldActive = (inlineState and MarkdownSpans.FLAG_BOLD) != 0
+    val italicActive = (inlineState and MarkdownSpans.FLAG_ITALIC) != 0
+    val underlineActive = (inlineState and MarkdownSpans.FLAG_UNDERLINE) != 0
+    val strikeActive = (inlineState and MarkdownSpans.FLAG_STRIKE) != 0
+    val highlightActive = (inlineState and MarkdownSpans.FLAG_HIGHLIGHT) != 0
+
+    Surface(
+        color = cs.surfaceContainer.copy(alpha = 0.97f),
+        tonalElevation = 3.dp,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        modifier = modifier,
+    ) {
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 2.dp),
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             @Composable
             fun Tool(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, active: Boolean = false, onClick: () -> Unit) {
-                IconButton(onClick = { haptics.tick(); onClick() }) {
-                    Icon(icon, stringResource(label), tint = if (active) cs.primary else cs.onSurface)
+                val bg by animateColorAsState(if (active) cs.primary.copy(alpha = 0.14f) else Color.Transparent, tween(120), label = "toolBg")
+                val tint by animateColorAsState(if (active) cs.primary else cs.onSurface, tween(120), label = "toolTint")
+                IconButton(
+                    onClick = { haptics.light(); onClick() },
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(bg),
+                ) {
+                    Icon(icon, stringResource(label), tint = tint, modifier = Modifier.size(22.dp))
                 }
             }
+
+            @Composable
+            fun Group() {
+                VerticalDivider(
+                    modifier = Modifier.padding(horizontal = 4.dp).height(22.dp),
+                    color = cs.outlineVariant.copy(alpha = 0.7f),
+                )
+            }
+
+            // Text size
             Tool(Icons.Rounded.FormatSize, R.string.text_settings, onClick = onText)
-            Tool(Icons.Rounded.FormatBold, R.string.bold) { vm.toggleBold() }
-            Tool(Icons.Rounded.FormatItalic, R.string.italic) { vm.toggleItalic() }
-            Tool(Icons.Rounded.FormatUnderlined, R.string.underline) { vm.toggleUnderline() }
+            Group()
+            // Inline styles
+            Tool(Icons.Rounded.FormatBold, R.string.bold, active = boldActive) { vm.toggleBold() }
+            Tool(Icons.Rounded.FormatItalic, R.string.italic, active = italicActive) { vm.toggleItalic() }
+            Tool(Icons.Rounded.FormatUnderlined, R.string.underline, active = underlineActive) { vm.toggleUnderline() }
             Box {
-                Tool(Icons.Rounded.Title, R.string.heading, onClick = onHeading)
+                Tool(Icons.Rounded.Title, R.string.heading, active = strikeActive || highlightActive, onClick = onHeading)
                 DropdownMenu(expanded = headingMenu, onDismissRequest = onHeadingDismiss) {
                     HeadingPicker { level -> vm.toggleHeading(level); onHeadingDismiss() }
                     HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                    DropdownMenuItem(text = { Text(stringResource(R.string.strikethrough)) }, onClick = { vm.toggleStrikethrough(); onHeadingDismiss() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.highlight)) }, onClick = { vm.toggleHighlight(); onHeadingDismiss() })
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.strikethrough)) },
+                        trailingIcon = { if (strikeActive) Icon(Icons.Rounded.Check, null, tint = cs.primary) },
+                        onClick = { vm.toggleStrikethrough(); onHeadingDismiss() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.highlight)) },
+                        trailingIcon = { if (highlightActive) Icon(Icons.Rounded.Check, null, tint = cs.primary) },
+                        onClick = { vm.toggleHighlight(); onHeadingDismiss() },
+                    )
                 }
             }
+            Group()
+            // Blocks
             Tool(Icons.Rounded.FormatQuote, R.string.quote) { vm.toggleQuote() }
             Box {
                 Tool(Icons.AutoMirrored.Rounded.FormatListBulleted, R.string.list, onClick = onList)
@@ -798,6 +852,8 @@ private fun EditorToolbar(
                 }
             }
             Tool(Icons.Rounded.Link, R.string.link, onClick = onLink)
+            Group()
+            // Tools
             Tool(Icons.Rounded.FindReplace, R.string.find_replace, active = findActive, onClick = onFind)
             Tool(Icons.Rounded.Palette, R.string.background, onClick = onBackground)
         }
@@ -852,19 +908,4 @@ private fun EditorOverflowMenu(
             )
         }
         Item(R.string.focus_mode, Icons.Rounded.CenterFocusStrong, onClick = onFocus)
-        Item(R.string.find_replace, Icons.Rounded.FindReplace, onClick = onFind)
-        Item(R.string.change_status, null, onClick = onStatus)
-        Item(R.string.apply_template, null, onClick = onTemplate)
-        Item(R.string.background, Icons.Rounded.Palette, onClick = onBackground)
-        Item(R.string.duplicate, Icons.Rounded.ContentCopy, onClick = onDuplicate)
-        Item(R.string.details, Icons.Rounded.Info, onClick = onDetails)
-        HorizontalDivider()
-        Item(R.string.export, Icons.Rounded.FileDownload, onClick = onExport)
-        Item(R.string.reading_mode, Icons.AutoMirrored.Rounded.MenuBook, onClick = onReading)
-        Item(R.string.version_history, Icons.Rounded.History, onClick = onVersions)
-        Item(R.string.outline, Icons.AutoMirrored.Rounded.FormatListBulleted, onClick = onOutline)
-        HorizontalDivider()
-        Item(R.string.archive, Icons.Rounded.Archive, tint = ActionColors.archive, onClick = onArchive)
-        Item(R.string.trash, Icons.Rounded.Delete, tint = ActionColors.trash, onClick = onTrash)
-    }
-}
+        
