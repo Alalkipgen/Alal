@@ -64,10 +64,22 @@ import com.alal.notes.ui.versions.VersionsScreen
 
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
 
-/** One shared duration so the outgoing and incoming screens travel together. */
-private const val SLIDE_MS = 250
+/**
+ * Keep the note list completely still for a short preparation window while the editor is
+ * composed off-screen and Room hydrates its TextFieldState. Without this window the editor's
+ * first empty frame could slide on-screen before the note text arrived, which looked like a
+ * flash or dropped frame even though navigation itself was fast.
+ */
+private const val OPEN_PREPARE_MS = 400
+private const val SLIDE_MS = 220
 
-private fun slideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
+private fun openSlideSpec() = tween<IntOffset>(
+    durationMillis = SLIDE_MS,
+    delayMillis = OPEN_PREPARE_MS,
+    easing = FastOutSlowInEasing,
+)
+
+private fun closeSlideSpec() = tween<IntOffset>(SLIDE_MS, easing = FastOutSlowInEasing)
 
 private fun NavBackStackEntry?.isEditor(): Boolean =
     this?.destination?.hasRoute(Route.Editor::class) == true
@@ -169,24 +181,23 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings) {
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        // Opening / closing a note is one horizontal move: the list slides out to the left while
-        // the editor slides in from the right (and the reverse on back). Both screens use the same
-        // spec, so nothing fades or scales on top of the other screen any more - that overlap is
-        // what made the "Write" button look like it flashed over the note.
+        // On open, hold the list for OPEN_PREPARE_MS while the editor composes off-screen and
+        // loads its note. Then move both complete surfaces together. Back navigation remains
+        // immediate, so the preparation delay is paid only when opening a note.
         enterTransition = {
-            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec())
+            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
             else fadeIn(tween(150))
         },
         exitTransition = {
-            if (targetState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec())
+            if (targetState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
             else fadeOut(tween(110))
         },
         popEnterTransition = {
-            if (initialState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec())
+            if (initialState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, closeSlideSpec())
             else fadeIn(tween(150))
         },
         popExitTransition = {
-            if (initialState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec())
+            if (initialState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, closeSlideSpec())
             else fadeOut(tween(110))
         },
     ) {
