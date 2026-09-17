@@ -24,9 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -52,7 +53,6 @@ import com.alal.notes.ui.lock.LockGate
 import com.alal.notes.ui.more.AboutScreen
 import com.alal.notes.ui.more.MoreScreen
 import com.alal.notes.ui.more.NoteListScreen
-import com.alal.notes.ui.stats.StatsScreen
 import com.alal.notes.ui.more.TagsScreen
 import com.alal.notes.ui.more.TemplatesScreen
 import com.alal.notes.ui.navigation.ListKind
@@ -61,17 +61,21 @@ import com.alal.notes.ui.search.SearchScreen
 import com.alal.notes.ui.settings.AppearanceScreen
 import com.alal.notes.ui.settings.EditorSettingsScreen
 import com.alal.notes.ui.settings.SettingsScreen
+import com.alal.notes.ui.stats.StatsScreen
 import com.alal.notes.ui.versions.VersionsScreen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 
 private data class Tab(val route: Route, val label: Int, val icon: ImageVector, val selectedIcon: ImageVector)
 
 /**
  * Keep Home completely still while the already-composed editor gets its first text layout.
- * The editor is off-screen during this hold, so its empty/default frame can never flash.
+ * The editor is off-screen during this hold, so its empty/default frame cannot flash.
  */
-private const val OPEN_RENDER_HOLD_MS = 300
+private const val OPEN_RENDER_HOLD_MS = 250
 private const val SLIDE_MS = 240
+private const val OPEN_GATE_RELEASE_MARGIN_MS = 80
 
 private fun openSlideSpec() = tween<IntOffset>(
     durationMillis = SLIDE_MS,
@@ -86,7 +90,6 @@ private fun NavBackStackEntry?.isEditor(): Boolean =
 
 @Composable
 fun AlalRoot(settings: Settings, pendingAction: String?, onActionConsumed: () -> Unit) {
-    // App lock wraps everything, including shortcut / notification deep links.
     LockGate(settings) {
         AlalShell(settings, pendingAction, onActionConsumed)
     }
@@ -103,7 +106,9 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
         when {
             action == MainActivity.ACTION_NEW_NOTE -> {
                 val id = mainVm.createNote()
-                if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
+                if (mainVm.prepareNote(id)) {
+                    navController.navigate(Route.Editor(id)) { launchSingleTop = true }
+                }
                 onActionConsumed()
             }
             action == MainActivity.ACTION_SEARCH -> {
@@ -112,7 +117,9 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
             }
             action.startsWith(openPrefix) -> {
                 action.removePrefix(openPrefix).toLongOrNull()?.let { id ->
-                    if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
+                    if (mainVm.prepareNote(id) && !navController.currentBackStackEntry.isEditor()) {
+                        navController.navigate(Route.Editor(id)) { launchSingleTop = true }
+                    }
                 }
                 onActionConsumed()
             }
@@ -128,10 +135,6 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
     val destination = backStack?.destination
     val showBar = tabs.any { tab -> destination?.hasRoute(tab.route::class) == true }
 
-    // Keep navigation outside the screen-measuring path. The old root Scaffold changed its
-    // content height as soon as the tab bar disappeared, so the outgoing Home FAB first dropped
-    // vertically and then slid left. Tabs now reserve their own fixed bar space; the complete
-    // Home screen (including Write) therefore travels right-to-left as one stable surface.
     Box(Modifier.fillMaxSize()) {
         AlalNavHost(navController, settings, mainVm)
         if (showBar) {
@@ -162,9 +165,6 @@ private fun AlalShell(settings: Settings, pendingAction: String?, onActionConsum
 
 @Composable
 private fun TabSurface(content: @Composable () -> Unit) {
-    // Material 3's NavigationBar is 80dp tall; navigationBarsPadding adds the gesture/button
-    // inset below it. Because this lives inside each tab destination it remains unchanged while
-    // that destination exits, avoiding any vertical relayout during the horizontal transition.
     Box(
         Modifier
             .fillMaxSize()
@@ -178,11 +178,21 @@ private fun TabSurface(content: @Composable () -> Unit) {
 @Composable
 private fun AlalNavHost(navController: NavHostController, settings: Settings, mainVm: MainViewModel) {
     val scope = rememberCoroutineScope()
-    // Hybrid open: recent/visible notes hit the bounded memory cache; a cold note is read on
-    // demand. Navigation never outruns that work, while the card's press/ripple covers the wait.
-    val openNote: (Long) -> Unit = { id ->
+    // Home remains tappable during the render hold, so an atomic gate admits one request only.
+    // launchSingleTop and the destination check provide a second line of defence.
+    val openGate = remember { AtomicBoolean(false) }
+    val openNote: (Long) -> Unit = openNote@{ id ->
+        if (navController.currentBackStackEntry.isEditor()) return@openNote
+        if (!openGate.compareAndSet(false, true)) return@openNote
         scope.launch {
-            if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
+            try {
+                if (mainVm.prepareNote(id) && !navController.currentBackStackEntry.isEditor()) {
+                    navController.navigate(Route.Editor(id)) { launchSingleTop = true }
+                    delay((OPEN_RENDER_HOLD_MS + SLIDE_MS + OPEN_GATE_RELEASE_MARGIN_MS).toLong())
+                }
+            } finally {
+                openGate.set(false)
+            }
         }
     }
     val back: () -> Unit = { navController.popBackStack() }
@@ -190,24 +200,34 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings, ma
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        // Navigation composes the editor off-screen immediately, then holds Home for 300 ms.
-        // Room/cache delivery, TextFieldState setup and the first long-text layout finish during
-        // that hidden window; only then does the single horizontal slide become visible.
+        // Compose/load the editor off-screen, keep Home fixed for 250 ms, then slide once.
         enterTransition = {
-            if (targetState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
-            else fadeIn(tween(150))
+            if (targetState.isEditor()) {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
+            } else {
+                fadeIn(tween(150))
+            }
         },
         exitTransition = {
-            if (targetState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
-            else fadeOut(tween(110))
+            if (targetState.isEditor()) {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, openSlideSpec())
+            } else {
+                fadeOut(tween(110))
+            }
         },
         popEnterTransition = {
-            if (initialState.isEditor()) slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, closeSlideSpec())
-            else fadeIn(tween(150))
+            if (initialState.isEditor()) {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, closeSlideSpec())
+            } else {
+                fadeIn(tween(150))
+            }
         },
         popExitTransition = {
-            if (initialState.isEditor()) slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, closeSlideSpec())
-            else fadeOut(tween(110))
+            if (initialState.isEditor()) {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, closeSlideSpec())
+            } else {
+                fadeOut(tween(110))
+            }
         },
     ) {
         composable<Route.Home> {
@@ -237,10 +257,19 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings, ma
         }
         composable<Route.NoteList> { entry ->
             val route = entry.toRoute<Route.NoteList>()
-            NoteListScreen(kind = route.kind, tagId = route.tagId, settings = settings, onOpenNote = openNote, onBack = back)
+            NoteListScreen(
+                kind = route.kind,
+                tagId = route.tagId,
+                settings = settings,
+                onOpenNote = openNote,
+                onBack = back,
+            )
         }
         composable<Route.Tags> {
-            TagsScreen(onOpenTag = { id -> navController.navigate(Route.NoteList(ListKind.TAG, id)) }, onBack = back)
+            TagsScreen(
+                onOpenTag = { id -> navController.navigate(Route.NoteList(ListKind.TAG, id)) },
+                onBack = back,
+            )
         }
         composable<Route.Templates> {
             TemplatesScreen(onBack = back, onCreated = openNote)
