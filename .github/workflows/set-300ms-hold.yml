@@ -1,0 +1,38 @@
+name: Set 300 ms editor hold
+
+on:
+  push:
+    paths:
+      - ".github/workflows/set-300ms-hold.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Set hold to 300 ms
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/alal/notes/ui/AlalRoot.kt')
+          s = p.read_text()
+          old = 'private const val OPEN_RENDER_HOLD_MS = 450'
+          assert s.count(old) == 1, '450 ms hold anchor missing'
+          s = s.replace(old, 'private const val OPEN_RENDER_HOLD_MS = 300', 1)
+          s = s.replace('then holds Home for 450 ms.', 'then holds Home for 300 ms.', 1)
+          p.write_text(s)
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/alal/notes/ui/AlalRoot.kt
+          git commit -m "fix: reduce editor render hold to 300 ms"
+          git pull --rebase origin main
+          git push origin HEAD:main
