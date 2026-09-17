@@ -70,7 +70,7 @@ private data class Tab(val route: Route, val label: Int, val icon: ImageVector, 
  * Keep Home completely still while the already-composed editor gets its first text layout.
  * The editor is off-screen during this hold, so its empty/default frame can never flash.
  */
-private const val OPEN_RENDER_HOLD_MS = 450
+private const val OPEN_RENDER_HOLD_MS = 300
 private const val SLIDE_MS = 240
 
 private fun openSlideSpec() = tween<IntOffset>(
@@ -190,7 +190,7 @@ private fun AlalNavHost(navController: NavHostController, settings: Settings, ma
     NavHost(
         navController = navController,
         startDestination = Route.Home,
-        // Navigation composes the editor off-screen immediately, then holds Home for 450 ms.
+        // Navigation composes the editor off-screen immediately, then holds Home for 300 ms.
         // Room/cache delivery, TextFieldState setup and the first long-text layout finish during
         // that hidden window; only then does the single horizontal slide become visible.
         enterTransition = {
