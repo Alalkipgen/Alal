@@ -1,0 +1,86 @@
+name: Note open gate
+
+on:
+  push:
+    paths:
+      - ".github/workflows/note-open-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4.0.1
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
+      - name: Patch hold and navigation gate
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/alal/notes/ui/AlalRoot.kt')
+          s = p.read_text()
+          s = s.replace('import androidx.compose.runtime.rememberCoroutineScope\n', 'import androidx.compose.runtime.remember\nimport androidx.compose.runtime.rememberCoroutineScope\n', 1)
+          s = s.replace('import kotlinx.coroutines.launch\n', 'import kotlinx.coroutines.delay\nimport kotlinx.coroutines.launch\nimport java.util.concurrent.atomic.AtomicBoolean\n', 1)
+          assert s.count('private const val OPEN_RENDER_HOLD_MS = 300') == 1
+          s = s.replace('private const val OPEN_RENDER_HOLD_MS = 300', 'private const val OPEN_RENDER_HOLD_MS = 250', 1)
+          s = s.replace('then holds Home for 300 ms.', 'then holds Home for 250 ms.', 1)
+          old = '''    val scope = rememberCoroutineScope()
+    // Hybrid open: recent/visible notes hit the bounded memory cache; a cold note is read on
+    // demand. Navigation never outruns that work, while the card's press/ripple covers the wait.
+    val openNote: (Long) -> Unit = { id ->
+        scope.launch {
+            if (mainVm.prepareNote(id)) navController.navigate(Route.Editor(id))
+        }
+    }
+'''
+          new = '''    val scope = rememberCoroutineScope()
+    // A tap may arrive several times while Home remains visible during the render hold. Admit
+    // exactly one open request until its destination and transition are complete.
+    val openGate = remember { AtomicBoolean(false) }
+    val openNote: (Long) -> Unit = openNote@{ id ->
+        if (navController.currentBackStackEntry.isEditor()) return@openNote
+        if (!openGate.compareAndSet(false, true)) return@openNote
+        scope.launch {
+            try {
+                if (mainVm.prepareNote(id) && !navController.currentBackStackEntry.isEditor()) {
+                    navController.navigate(Route.Editor(id)) { launchSingleTop = true }
+                    delay((OPEN_RENDER_HOLD_MS + SLIDE_MS + 80).toLong())
+                }
+            } finally {
+                openGate.set(false)
+            }
+        }
+    }
+'''
+          assert old in s, 'open-note block missing'
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/alal/notes/ui/AlalRoot.kt
+          git commit -m "fix: gate repeated note opens and use a 250 ms hold"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Build and test
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
+      - name: Mark verified
+        run: |
+          date -u > .note-open-gate-build-ok
+          git add .note-open-gate-build-ok
+          git commit -m "test: verify note open gate build"
+          git pull --rebase origin main
+          git push origin HEAD:main
