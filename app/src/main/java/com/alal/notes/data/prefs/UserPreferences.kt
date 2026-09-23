@@ -69,7 +69,8 @@ data class Settings(
     val lockTimeoutSec: Int = 0,
 ) {
     companion object {
-        const val DEFAULT_ACCENT: Int = 0xFF2A7F7F.toInt()
+        /** Material You primary; used when the device has no wallpaper colours. */
+        const val DEFAULT_ACCENT: Int = 0xFF6750A4.toInt()
     }
 }
 

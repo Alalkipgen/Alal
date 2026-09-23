@@ -23,8 +23,8 @@ enum class AccentMode { DYNAMIC, PRESET, CUSTOM }
 
 /** Theme keys from the spec (§3.4). `isDark == null` means follow the OS. */
 enum class AppThemeKey(val isDark: Boolean?) {
-    PAPER(false), WHITE(false), SEPIA(false), MINT(false), SKY(false), ROSE(false),
-    INK(true), SLATE(true), FOREST(true), BLACK(true),
+    MATERIAL(false), PAPER(false), WHITE(false), SEPIA(false), MINT(false), SKY(false), ROSE(false),
+    MIDNIGHT(true), INK(true), SLATE(true), FOREST(true), BLACK(true),
     SYSTEM(null);
 }
 

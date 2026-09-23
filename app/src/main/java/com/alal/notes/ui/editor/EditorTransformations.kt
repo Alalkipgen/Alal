@@ -26,14 +26,22 @@ import kotlin.math.abs
 
 /**
  * Continues Markdown lists when the user presses Enter (`- `, `1. `, `- [ ] `, `> `).
- * Detects a single inserted newline by comparing with the original buffer.
+ *
+ * The detection has to be exact. "One character longer than before" also describes an IME word
+ * replacement (`cofee` becoming `coffee`), and rewriting the buffer during one of those cancels
+ * the composing region the keyboard is holding, so the keyboard re-commits the word on top of
+ * the character in front of it - "Take a cofee." turns into "Take acoffee.". The transformation
+ * therefore only fires when the edit really is a single `\n` inserted at the caret with every
+ * other character left untouched.
  */
 @OptIn(ExperimentalFoundationApi::class)
 object ListContinuationTransformation : InputTransformation {
     override fun TextFieldBuffer.transformInput() {
         if (length != originalText.length + 1) return
+        if (!selection.collapsed) return
         val cursor = selection.start
-        if (!selection.collapsed || cursor <= 0 || charAt(cursor - 1) != '\n') return
+        if (cursor <= 0 || cursor > length || charAt(cursor - 1) != '\n') return
+        if (!isSingleNewlineInsertAt(cursor - 1)) return
         val result = MarkdownToggle.continueList(originalText.toString(), asCharSequence().toString(), cursor) ?: return
         val newText = result.text
         // Replace only the tail after the cursor position where the change begins.
@@ -43,6 +51,15 @@ object ListContinuationTransformation : InputTransformation {
         while (prefix < maxPrefix && current[prefix] == newText[prefix]) prefix++
         replace(prefix, current.length, newText.substring(prefix))
         selection = TextRange(result.selection.start.coerceIn(0, length), result.selection.end.coerceIn(0, length))
+    }
+
+    /** True when the new buffer is the previous one with exactly one `\n` inserted at [at]. */
+    private fun TextFieldBuffer.isSingleNewlineInsertAt(at: Int): Boolean {
+        val old = originalText
+        val new = asCharSequence()
+        for (i in 0 until at) if (new[i] != old[i]) return false
+        for (i in at + 1 until new.length) if (new[i] != old[i - 1]) return false
+        return true
     }
 }
 

@@ -178,9 +178,6 @@ fun NoteCard(
                         Icon(Icons.Rounded.Star, contentDescription = stringResource(R.string.favorite), tint = ActionColors.pin, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                     }
-                    if (note.isPinned) {
-                        Icon(Icons.Rounded.PushPin, contentDescription = stringResource(R.string.pinned), tint = ActionColors.pin, modifier = Modifier.size(16.dp))
-                    }
                     if (selecting) {
                         Spacer(Modifier.width(6.dp))
                         Icon(
@@ -216,13 +213,27 @@ fun NoteCard(
                     )
                 }
                 Spacer(Modifier.height(if (compact) 4.dp else 10.dp))
-                Text(
-                    text = stringResource(R.string.meta_words, Format.number(note.wordCount)) + " · " + Format.relative(note.updatedAt, is24),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = cs.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                )
+                // Footer: date on the left, pin on the right - the card anatomy of the redesign.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.meta_words, Format.number(note.wordCount)) + " · " + Format.relative(note.updatedAt, is24),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = cs.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (note.isPinned) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Rounded.PushPin,
+                            contentDescription = stringResource(R.string.pinned),
+                            tint = cs.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp),
+                        )
+                    }
+                }
             }
         }
     }

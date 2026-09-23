@@ -247,12 +247,14 @@
     <string name="card_divider">မျဉ်းသာ</string>
     <string name="themed_icon">အသွင်အပြင်ညီ အိုင်ကွန်</string>
     <string name="themed_icon_hint">Android 13+ တွင် သင့် နောက်ခံအရောင်များကို သုံးသည်</string>
+    <string name="theme_material">Material You</string>
     <string name="theme_paper">စက္ကူ</string>
     <string name="theme_white">အဖြူ</string>
     <string name="theme_sepia">ဆီပီယာ</string>
     <string name="theme_mint">မင့်</string>
     <string name="theme_sky">ကောင်းကင်</string>
     <string name="theme_rose">နှင်းဆီ</string>
+    <string name="theme_midnight">သန်းခေါင်</string>
     <string name="theme_ink">မှင်</string>
     <string name="theme_slate">ကျောက်ပြား</string>
     <string name="theme_forest">သစ်တော</string>
@@ -400,4 +402,5 @@
     <string name="outline_hint_paragraphs">ခေါင်းစီး မရှိလို့ စာပိုဒ် %1$d ခု ပြထား — နှိပ်ပြီး သွားပါ</string>
     <string name="reading_smaller">စာလုံး ချုံ့</string>
     <string name="reading_larger">စာလုံး ချဲ့</string>
+    <string name="home_title">မှတ်စုများ</string>
 </resources>

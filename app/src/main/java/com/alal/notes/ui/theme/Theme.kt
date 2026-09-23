@@ -128,7 +128,7 @@ fun AlalTheme(settings: Settings, content: @Composable () -> Unit) {
             if (settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val dyn = if (palette.dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
                 if (palette.dark) blend(dyn.primary, dyn.inversePrimary, 0.3f) else dyn.primary
-            } else Accents.teal
+            } else Accents.purple
         }
         AccentMode.PRESET, AccentMode.CUSTOM -> Color(settings.accentColor)
     }

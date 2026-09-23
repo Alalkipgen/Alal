@@ -35,6 +35,7 @@ import com.alal.notes.domain.wordcount.isMyanmarChar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -95,10 +96,20 @@ class EditorViewModel @Inject constructor(
     private var statsRefreshJob: Job? = null
     private var statsSeedBody: String? = null
 
+    /** Exact content of the last row this editor wrote, so its own echo is never re-applied. */
+    private var lastWrittenTitle: String? = null
+    private var lastWrittenBody: String? = null
+
+    /** Wall clock of the most recent keystroke; guards the buffer while the IME is composing. */
+    private var lastEditAt = 0L
+
     private companion object {
         const val LONG_NOTE_CHARS = 16_000
         const val INITIAL_SCRIPT_SAMPLE_CHARS = 2_048
         const val LONG_NOTE_STATS_DEBOUNCE_MS = 900L
+
+        /** How long typing has to be idle before an external change may replace the buffer. */
+        const val QUIET_BEFORE_REFRESH_MS = 700L
     }
 
     /** Latest persisted note (metadata such as pin, status, goal, background). */
@@ -214,7 +225,7 @@ class EditorViewModel @Inject constructor(
                     // contentEquals walks the chars without allocating a copy.
                     a.first.contentEquals(b.first) && a.second.contentEquals(b.second)
                 }
-                .map { dirty = true; it }
+                .map { dirty = true; lastEditAt = System.currentTimeMillis(); it }
                 .debounce { autoSaveDelay }
                 .collect { save() }
         }
@@ -267,12 +278,31 @@ class EditorViewModel @Inject constructor(
             }
             // Pick up content changed elsewhere (e.g. "Restore" from Version history) while this
             // editor is open and has no unsaved typing of its own.
-            repository.observeNote(id).collect { fresh ->
-                val base = loadedNote.value ?: return@collect
-                if (fresh == null || dirty || fresh.updatedAt <= base.updatedAt) return@collect
+            //
+            // collectLatest, not collect: the guard below waits out the keyboard, and a newer row
+            // must cancel that wait instead of queueing behind it.
+            repository.observeNote(id).collectLatest { fresh ->
+                val base = loadedNote.value ?: return@collectLatest
+                if (fresh == null || dirty || fresh.updatedAt <= base.updatedAt) return@collectLatest
                 if (fresh.body == bodyState.text.toString() && fresh.title == titleState.text.toString()) {
                     loadedNote.value = fresh
-                    return@collect
+                    return@collectLatest
+                }
+                // Our own write coming back through Room. Pushing it into the buffer would undo
+                // whatever was typed while the write was in flight, so only the bookkeeping runs.
+                if (fresh.body == lastWrittenBody && fresh.title == lastWrittenTitle) {
+                    loadedNote.value = fresh
+                    return@collectLatest
+                }
+                // Replacing the buffer restarts the IME composition. Doing that mid-word makes the
+                // keyboard re-commit its candidate over the previous character (the "Take acoffee."
+                // bug), so an external change waits for a gap in typing first.
+                val quiet = QUIET_BEFORE_REFRESH_MS - (System.currentTimeMillis() - lastEditAt)
+                if (quiet > 0) delay(quiet)
+                if (dirty || loadedNote.value?.updatedAt?.let { it >= fresh.updatedAt } == true) return@collectLatest
+                if (fresh.body == bodyState.text.toString() && fresh.title == titleState.text.toString()) {
+                    loadedNote.value = fresh
+                    return@collectLatest
                 }
                 loadedNote.value = fresh
                 _stats.value = seedStats(fresh)
@@ -293,15 +323,26 @@ class EditorViewModel @Inject constructor(
         saveMutex.withLock {
             val title = titleState.text.toString()
             val body = bodyState.text.toString()
+            lastWrittenTitle = title
+            lastWrittenBody = body
             val current = repository.getNote(base.id) ?: base
-            if (current.title == title && current.body == body) { dirty = false; return }
+            if (current.title == title && current.body == body) { clearDirtyIfUnchanged(title, body); return }
             val saved = repository.saveContent(current, title, body, method)
             loadedNote.value = saved
-            dirty = false
+            clearDirtyIfUnchanged(title, body)
             _saved.value++
             // Daily writing stats + automatic version snapshot (repository decides whether one is due).
             repository.afterSave(current, saved)
         }
+    }
+
+    /**
+     * A save reads the buffer, then suspends for the database round trip. Anything typed during
+     * that window is not in the row that was just written, so the note has to stay dirty -
+     * clearing the flag unconditionally used to lose those keystrokes on the next refresh.
+     */
+    private fun clearDirtyIfUnchanged(title: String, body: String) {
+        if (titleState.text.contentEquals(title) && bodyState.text.contentEquals(body)) dirty = false
     }
 
     /** Fire-and-forget save used from onPause / back. */
@@ -625,8 +666,22 @@ class EditorViewModel @Inject constructor(
  * so restoring or reloading a note never yanks the view to the bottom.
  */
 private fun TextFieldState.setTextKeepingCursor(value: String, cursor: Int) {
+    val old = text
+    if (old.contentEquals(value)) {
+        val at = cursor.coerceIn(0, old.length)
+        if (selection.start != at || !selection.collapsed) edit { selection = TextRange(at) }
+        return
+    }
+    // Replace only the part that actually differs. Rewriting the whole buffer throws away the
+    // composing region the keyboard is holding, which is how an autocorrect landing next to a
+    // background refresh used to swallow the space in front of the corrected word.
+    var prefix = 0
+    val max = minOf(old.length, value.length)
+    while (prefix < max && old[prefix] == value[prefix]) prefix++
+    var suffix = 0
+    while (suffix < max - prefix && old[old.length - 1 - suffix] == value[value.length - 1 - suffix]) suffix++
     edit {
-        replace(0, length, value)
+        replace(prefix, old.length - suffix, value.substring(prefix, value.length - suffix))
         val at = cursor.coerceIn(0, length)
         selection = TextRange(at)
     }

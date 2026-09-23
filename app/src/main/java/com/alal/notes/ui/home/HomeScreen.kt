@@ -1,6 +1,8 @@
 package com.alal.notes.ui.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,6 +24,8 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DarkMode
@@ -43,8 +48,11 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -66,6 +74,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
@@ -191,19 +200,26 @@ fun HomeScreen(
                 )
             } else {
                 TopAppBar(
-                    title = {
-                        Text(
-                            stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-                        )
-                    },
+                    title = {},
                     actions = {
-                        IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, stringResource(R.string.search)) }
-                        IconButton(onClick = { haptics.tick(); vm.toggleDarkTheme(dark) }) {
+                        FilledTonalIconButton(
+                            onClick = { haptics.tick(); vm.toggleDarkTheme(dark) },
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = cs.surfaceContainerHigh,
+                                contentColor = cs.onSurfaceVariant,
+                            ),
+                        ) {
                             Icon(if (dark) Icons.Outlined.LightMode else Icons.Outlined.DarkMode, stringResource(R.string.theme_toggle))
                         }
+                        Spacer(Modifier.width(8.dp))
                         Box {
-                            IconButton(onClick = { overflow = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
+                            FilledTonalIconButton(
+                                onClick = { overflow = true },
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = cs.surfaceContainerHigh,
+                                    contentColor = cs.onSurfaceVariant,
+                                ),
+                            ) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
                             DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
                                 Text(stringResource(R.string.view_mode), Modifier.padding(horizontal = 16.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                                 DropdownMenuItem(
@@ -237,6 +253,7 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        Spacer(Modifier.width(8.dp))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = cs.background),
                 )
@@ -247,15 +264,18 @@ fun HomeScreen(
                 ExtendedFloatingActionButton(
                     onClick = { haptics.tick(); showTemplates = true },
                     expanded = fabExpanded,
-                    icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
-                    text = { Text(stringResource(R.string.write)) },
+                    icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                    text = { Text(stringResource(R.string.new_note)) },
                     containerColor = cs.primary,
                     contentColor = cs.onPrimary,
+                    shape = RoundedCornerShape(18.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp),
                 )
             }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            if (!state.selecting) HomeHeader(onSearch = onSearch)
             CategoryChips(
                 categories = state.categories,
                 selected = state.categoryFilter,
@@ -309,6 +329,39 @@ fun HomeScreen(
     }
 }
 
+/** Big "Notes" headline plus the filled search field, straight from the redesign. */
+@Composable
+private fun HomeHeader(onSearch: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp)) {
+        Text(
+            stringResource(R.string.home_title),
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
+            color = cs.onBackground,
+        )
+        Spacer(Modifier.height(14.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(CircleShape)
+                .background(cs.surfaceContainerHigh)
+                .clickable(onClick = onSearch)
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Search, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.search_hint),
+                color = cs.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
 @Composable
 private fun CategoryChips(
     categories: List<Category>,
@@ -318,7 +371,7 @@ private fun CategoryChips(
     onAdd: () -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { PillChip(stringResource(R.string.all), selected == -1L, onClick = { onSelect(-1L) }) }

@@ -13,8 +13,6 @@
     <style name="Theme.Alal.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/paper_bg</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
-        <!-- Black disc behind the wordmark so the paper-white letters are visible on any splash background -->
-        <item name="windowSplashScreenIconBackgroundColor">#000000</item>
         <item name="windowSplashScreenAnimationDuration">300</item>
         <item name="postSplashScreenTheme">@style/Theme.Alal</item>
     </style>

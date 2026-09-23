@@ -247,12 +247,14 @@
     <string name="card_divider">Divider only</string>
     <string name="themed_icon">Themed icon</string>
     <string name="themed_icon_hint">Uses your wallpaper colors on Android 13+</string>
+    <string name="theme_material">Material You</string>
     <string name="theme_paper">Paper</string>
     <string name="theme_white">White</string>
     <string name="theme_sepia">Sepia</string>
     <string name="theme_mint">Mint</string>
     <string name="theme_sky">Sky</string>
     <string name="theme_rose">Rose</string>
+    <string name="theme_midnight">Midnight</string>
     <string name="theme_ink">Ink</string>
     <string name="theme_slate">Slate</string>
     <string name="theme_forest">Forest</string>
@@ -400,4 +402,5 @@
     <string name="outline_hint_paragraphs">No headings; showing %1$d paragraphs — tap to jump</string>
     <string name="reading_smaller">Smaller text</string>
     <string name="reading_larger">Larger text</string>
+    <string name="home_title">Notes</string>
 </resources>

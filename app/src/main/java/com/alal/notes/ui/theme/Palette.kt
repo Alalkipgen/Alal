@@ -3,35 +3,44 @@ package com.alal.notes.ui.theme
 import androidx.compose.ui.graphics.Color
 import com.alal.notes.domain.model.AppThemeKey
 import com.alal.notes.domain.model.NoteStatus
+import kotlin.math.abs
 
 /** Background / text / surface triple for one theme (§3.4). */
 data class ThemePalette(val key: AppThemeKey, val background: Color, val onBackground: Color, val surface: Color, val dark: Boolean)
 
 object Palettes {
+    /** Material You light: the near-white lavender surface the redesign is built on. */
+    val material = ThemePalette(AppThemeKey.MATERIAL, Color(0xFFFAF7FD), Color(0xFF1D1B20), Color(0xFFFFFFFF), false)
     val paper = ThemePalette(AppThemeKey.PAPER, Color(0xFFFAF8F3), Color(0xFF1C1B1F), Color(0xFFFFFFFF), false)
     val white = ThemePalette(AppThemeKey.WHITE, Color(0xFFFFFFFF), Color(0xFF1C1B1F), Color(0xFFF4F4F5), false)
     val sepia = ThemePalette(AppThemeKey.SEPIA, Color(0xFFF4ECD8), Color(0xFF3B2F1E), Color(0xFFFBF6EA), false)
     val mint = ThemePalette(AppThemeKey.MINT, Color(0xFFEEF5F1), Color(0xFF1B2E25), Color(0xFFF7FBF9), false)
     val sky = ThemePalette(AppThemeKey.SKY, Color(0xFFEDF3F9), Color(0xFF152131), Color(0xFFF6F9FC), false)
     val rose = ThemePalette(AppThemeKey.ROSE, Color(0xFFF9EFF1), Color(0xFF2E1C21), Color(0xFFFDF6F7), false)
+
+    /** Material You dark: a warm near-black with the same violet cast as the light theme. */
+    val midnight = ThemePalette(AppThemeKey.MIDNIGHT, Color(0xFF131016), Color(0xFFE7E0EA), Color(0xFF1D1A22), true)
     val ink = ThemePalette(AppThemeKey.INK, Color(0xFF121212), Color(0xFFE6E1D8), Color(0xFF1E1E1E), true)
     val slate = ThemePalette(AppThemeKey.SLATE, Color(0xFF1A1D24), Color(0xFFDDE1E8), Color(0xFF242832), true)
     val forest = ThemePalette(AppThemeKey.FOREST, Color(0xFF0F1A15), Color(0xFFD6E4DA), Color(0xFF182420), true)
     val black = ThemePalette(AppThemeKey.BLACK, Color(0xFF000000), Color(0xFFE6E1D8), Color(0xFF121212), true)
 
-    val all = listOf(paper, white, sepia, mint, sky, rose, ink, slate, forest, black)
+    val all = listOf(material, paper, white, sepia, mint, sky, rose, midnight, ink, slate, forest, black)
 
     fun resolve(key: AppThemeKey, systemDark: Boolean): ThemePalette = when (key) {
-        AppThemeKey.SYSTEM -> if (systemDark) ink else paper
-        else -> all.first { it.key == key }
+        AppThemeKey.SYSTEM -> if (systemDark) midnight else material
+        else -> all.firstOrNull { it.key == key } ?: if (systemDark) midnight else material
     }
 }
 
 data class AccentPreset(val name: String, val color: Color)
 
 object Accents {
+    /** Material You primary. Default accent when no wallpaper colours are available. */
+    val purple = Color(0xFF6750A4)
     val teal = Color(0xFF2A7F7F)
     val presets = listOf(
+        AccentPreset("Purple", purple),
         AccentPreset("Teal", teal),
         AccentPreset("Indigo", Color(0xFF4F5BD5)),
         AccentPreset("Amber", Color(0xFFD98E04)),
@@ -61,12 +70,30 @@ fun NoteStatus.color(dark: Boolean): Color = when (this) {
     NoteStatus.PUBLISHED -> if (dark) Color(0xFF7ACF97) else Color(0xFF2E7D4F)
 }
 
-/** 12 pastel note backgrounds (light). Darkened automatically in dark themes. */
+/**
+ * The twelve note / category tints of the redesign. The first ten are the Material You
+ * "category colours" from the spec, in order; the last two round the picker out to a 6 x 2 grid.
+ */
 object NoteBackgrounds {
     val pastels: List<Color> = listOf(
-        Color(0xFFFFF4E0), Color(0xFFFFE8E0), Color(0xFFFDE2EA), Color(0xFFF1E4F7),
-        Color(0xFFE3E8FB), Color(0xFFDFF1FA), Color(0xFFDFF6EE), Color(0xFFE8F5D9),
-        Color(0xFFFBF7CF), Color(0xFFF3EDE4), Color(0xFFE9E9EC), Color(0xFFFFEFD5),
+        Color(0xFFE8DEF8), // lavender
+        Color(0xFFD9E7DB), // sage
+        Color(0xFFFFDCC2), // peach
+        Color(0xFFD6E4F7), // sky
+        Color(0xFFF7D8E3), // pink
+        Color(0xFFF5EDD8), // sand
+        Color(0xFFDCE7E6), // mist
+        Color(0xFFEADDF5), // lilac
+        Color(0xFFFFE0E0), // blush
+        Color(0xFFE2E6D8), // olive
+        Color(0xFFFFF1C9), // butter
+        Color(0xFFE6E0E9), // stone
+    )
+
+    /** Display names for the ten spec colours, used by the colour picker. */
+    val names: List<String> = listOf(
+        "Lavender", "Sage", "Peach", "Sky", "Pink", "Sand",
+        "Mist", "Lilac", "Blush", "Olive", "Butter", "Stone",
     )
 
     data class Gradient(val name: String, val start: Color, val end: Color)
@@ -80,11 +107,50 @@ object NoteBackgrounds {
         Gradient("Slate", Color(0xFFE6E9EF), Color(0xFFD7DCE5)),
     )
 
-    /** Darkens a pastel so it works on a dark theme (~22% luminance). */
+    /**
+     * Dark-theme counterpart of a pastel. The old version simply scaled the RGB down, which
+     * turned every tint into the same muddy grey; this keeps the hue, keeps enough chroma for
+     * the card to stay recognisable, and pins the lightness where white body text is readable.
+     */
     fun forDark(c: Color): Color {
-        val r = c.red * 0.28f
-        val g = c.green * 0.28f
-        val b = c.blue * 0.28f
-        return Color(r + 0.06f, g + 0.06f, b + 0.06f, 1f)
+        val (h, s, _) = c.toHsl()
+        if (s < 0.06f) return Color(0xFF232027) // neutrals become the dark surface tone
+        return hsl(h, (s * 1.1f).coerceIn(0.26f, 0.55f), 0.28f)
+    }
+
+    private fun Color.toHsl(): Triple<Float, Float, Float> {
+        val max = maxOf(red, green, blue)
+        val min = minOf(red, green, blue)
+        val l = (max + min) / 2f
+        val d = max - min
+        if (d < 1e-4f) return Triple(0f, 0f, l)
+        val s = d / (1f - abs(2f * l - 1f)).coerceAtLeast(1e-4f)
+        val h = when (max) {
+            red -> (green - blue) / d + if (green < blue) 6f else 0f
+            green -> (blue - red) / d + 2f
+            else -> (red - green) / d + 4f
+        } * 60f
+        return Triple(h, s.coerceIn(0f, 1f), l)
+    }
+
+    private fun hsl(h: Float, s: Float, l: Float): Color {
+        val c = (1f - abs(2f * l - 1f)) * s
+        val hp = (((h % 360f) + 360f) % 360f) / 60f
+        val x = c * (1f - abs(hp % 2f - 1f))
+        val rgb = when (hp.toInt()) {
+            0 -> Triple(c, x, 0f)
+            1 -> Triple(x, c, 0f)
+            2 -> Triple(0f, c, x)
+            3 -> Triple(0f, x, c)
+            4 -> Triple(x, 0f, c)
+            else -> Triple(c, 0f, x)
+        }
+        val m = l - c / 2f
+        return Color(
+            (rgb.first + m).coerceIn(0f, 1f),
+            (rgb.second + m).coerceIn(0f, 1f),
+            (rgb.third + m).coerceIn(0f, 1f),
+            1f,
+        )
     }
 }

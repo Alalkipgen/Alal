@@ -177,12 +177,14 @@ private fun ThemeTile(p: ThemePalette?, selected: Boolean, label: String, onClic
 
 @Composable
 fun themeLabel(key: AppThemeKey): String = when (key) {
+    AppThemeKey.MATERIAL -> stringResource(R.string.theme_material)
     AppThemeKey.PAPER -> stringResource(R.string.theme_paper)
     AppThemeKey.WHITE -> stringResource(R.string.theme_white)
     AppThemeKey.SEPIA -> stringResource(R.string.theme_sepia)
     AppThemeKey.MINT -> stringResource(R.string.theme_mint)
     AppThemeKey.SKY -> stringResource(R.string.theme_sky)
     AppThemeKey.ROSE -> stringResource(R.string.theme_rose)
+    AppThemeKey.MIDNIGHT -> stringResource(R.string.theme_midnight)
     AppThemeKey.INK -> stringResource(R.string.theme_ink)
     AppThemeKey.SLATE -> stringResource(R.string.theme_slate)
     AppThemeKey.FOREST -> stringResource(R.string.theme_forest)

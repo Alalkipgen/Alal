@@ -80,7 +80,7 @@ class HomeViewModel @Inject constructor(
     fun setViewMode(mode: ViewMode) = viewModelScope.launch { prefs.setViewMode(mode) }
     fun setSortMode(mode: SortMode) = viewModelScope.launch { prefs.setSortMode(mode) }
     fun toggleDarkTheme(currentDark: Boolean) = viewModelScope.launch {
-        prefs.setTheme(if (currentDark) AppThemeKey.PAPER else AppThemeKey.INK)
+        prefs.setTheme(if (currentDark) AppThemeKey.MATERIAL else AppThemeKey.MIDNIGHT)
     }
 
     fun pin(ids: Collection<Long>, pinned: Boolean) = viewModelScope.launch { repository.setPinned(ids.toList(), pinned); clearSelection() }

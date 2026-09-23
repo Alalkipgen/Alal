@@ -1,13 +1,12 @@
 package com.alal.notes.ui.editor
 
-import android.content.Intent
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
@@ -54,6 +55,7 @@ import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FindReplace
@@ -63,10 +65,10 @@ import androidx.compose.material.icons.rounded.FormatItalic
 import androidx.compose.material.icons.rounded.FormatQuote
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.FormatUnderlined
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Notifications
@@ -81,6 +83,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -89,6 +92,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -105,13 +109,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -120,18 +124,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.alal.notes.R
 import com.alal.notes.data.prefs.Settings
+import com.alal.notes.domain.markdown.MarkdownSpans
 import com.alal.notes.domain.model.MarginMode
 import com.alal.notes.domain.model.NoteStatus
 import com.alal.notes.domain.model.PaperTexture
-import com.alal.notes.domain.markdown.MarkdownSpans
 import com.alal.notes.ui.components.ConfettiBurst
 import com.alal.notes.ui.components.GoalProgressBar
+import com.alal.notes.ui.components.IconTile
 import com.alal.notes.ui.components.PaperTextureBackground
 import com.alal.notes.ui.components.StatusChip
 import com.alal.notes.ui.components.label
@@ -141,9 +147,9 @@ import com.alal.notes.ui.theme.NoteBackgrounds
 import com.alal.notes.ui.theme.color
 import com.alal.notes.ui.util.Format
 import com.alal.notes.ui.util.rememberHaptics
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 private enum class Sheet { NONE, TEXT, BACKGROUND, STATS, TEMPLATE, EXPORT, OUTLINE }
 private enum class Dialog { NONE, LINK, DETAILS, TAG, REMINDER }
@@ -310,6 +316,13 @@ fun EditorScreen(
                                         context.startActivity(Intent.createChooser(send, context.getString(R.string.share)))
                                     }
                                 }) { Icon(Icons.Rounded.Share, stringResource(R.string.share)) }
+                                IconButton(onClick = { haptics.confirm(); vm.togglePin() }) {
+                                    Icon(
+                                        Icons.Rounded.PushPin,
+                                        stringResource(if (current?.isPinned == true) R.string.unpin else R.string.pin),
+                                        tint = if (current?.isPinned == true) ActionColors.pin else cs.onSurfaceVariant,
+                                    )
+                                }
                                 Box {
                                     IconButton(onClick = { overflow = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
                                     EditorOverflowMenu(
@@ -791,10 +804,10 @@ private fun EditorToolbar(
     val highlightActive = (inlineState and MarkdownSpans.FLAG_HIGHLIGHT) != 0
 
     Surface(
-        color = cs.surfaceContainer.copy(alpha = 0.97f),
+        color = cs.surfaceContainerHigh,
         tonalElevation = 3.dp,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        modifier = modifier,
+        shape = RoundedCornerShape(26.dp),
+        modifier = modifier.padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
@@ -891,41 +904,78 @@ private fun EditorOverflowMenu(
     onOutline: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        // Colour action row: Pin | Reminder | Lock | Goal
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            @Composable
-            fun Action(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, tint: Color, onClick: () -> Unit) {
-                IconButton(onClick = { onDismiss(); onClick() }) { Icon(icon, stringResource(label), tint = tint) }
+    if (!expanded) return
+    // The redesign replaces the cramped overflow dropdown with a Material You bottom sheet:
+    // four quick actions on tiles, then the full list, with Delete called out in red.
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                @Composable
+                fun Quick(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, on: Boolean, tint: Color, onClick: () -> Unit) {
+                    Column(
+                        Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { onDismiss(); onClick() }
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        IconTile(
+                            icon, null, size = 48,
+                            container = if (on) tint.copy(alpha = 0.20f) else cs.primaryContainer,
+                            tint = if (on) tint else cs.onPrimaryContainer,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(stringResource(label), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, maxLines = 1)
+                    }
+                }
+                Quick(Icons.Rounded.PushPin, if (pinned) R.string.unpin else R.string.pin, pinned, ActionColors.pin, onPin)
+                Quick(Icons.Rounded.Notifications, R.string.reminder, reminderSet, ActionColors.reminder, onReminder)
+                Quick(Icons.Rounded.Lock, if (locked) R.string.unlock else R.string.lock, locked, ActionColors.lock, onLock)
+                Quick(Icons.Rounded.Flag, R.string.word_goal, false, cs.primary, onGoal)
             }
-            Action(Icons.Rounded.PushPin, if (pinned) R.string.unpin else R.string.pin, if (pinned) ActionColors.pin else cs.onSurfaceVariant, onPin)
-            Action(Icons.Rounded.Notifications, R.string.reminder, if (reminderSet) ActionColors.reminder else cs.onSurfaceVariant, onReminder)
-            Action(Icons.Rounded.Lock, if (locked) R.string.unlock else R.string.lock, if (locked) ActionColors.lock else cs.onSurfaceVariant, onLock)
-            Action(Icons.Rounded.Flag, R.string.word_goal, cs.primary, onGoal)
+            Spacer(Modifier.height(4.dp))
+            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
+
+            @Composable
+            fun Item(label: Int, icon: androidx.compose.ui.graphics.vector.ImageVector?, tint: Color? = null, onClick: () -> Unit) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onDismiss(); onClick() }
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (icon != null) {
+                        IconTile(
+                            icon, null, size = 40,
+                            container = if (tint != null) tint.copy(alpha = 0.16f) else cs.primaryContainer,
+                            tint = tint ?: cs.onPrimaryContainer,
+                        )
+                    } else {
+                        Spacer(Modifier.size(40.dp))
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, color = tint ?: cs.onSurface)
+                }
+            }
+            Item(R.string.focus_mode, Icons.Rounded.CenterFocusStrong, onClick = onFocus)
+            Item(R.string.find_replace, Icons.Rounded.FindReplace, onClick = onFind)
+            Item(R.string.change_status, Icons.Rounded.Flag, onClick = onStatus)
+            Item(R.string.apply_template, Icons.Rounded.Dashboard, onClick = onTemplate)
+            Item(R.string.background, Icons.Rounded.Palette, onClick = onBackground)
+            Item(R.string.duplicate, Icons.Rounded.ContentCopy, onClick = onDuplicate)
+            Item(R.string.details, Icons.Rounded.Info, onClick = onDetails)
+            HorizontalDivider(Modifier.padding(horizontal = 20.dp, vertical = 6.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
+            Item(R.string.export, Icons.Rounded.FileDownload, onClick = onExport)
+            Item(R.string.reading_mode, Icons.AutoMirrored.Rounded.MenuBook, onClick = onReading)
+            Item(R.string.version_history, Icons.Rounded.History, onClick = onVersions)
+            Item(R.string.outline, Icons.AutoMirrored.Rounded.FormatListBulleted, onClick = onOutline)
+            HorizontalDivider(Modifier.padding(horizontal = 20.dp, vertical = 6.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
+            Item(R.string.archive, Icons.Rounded.Archive, tint = ActionColors.archive, onClick = onArchive)
+            Item(R.string.trash, Icons.Rounded.Delete, tint = ActionColors.trash, onClick = onTrash)
         }
-        HorizontalDivider()
-        @Composable
-        fun Item(label: Int, icon: androidx.compose.ui.graphics.vector.ImageVector?, tint: Color? = null, onClick: () -> Unit) {
-            DropdownMenuItem(
-                text = { Text(stringResource(label), color = tint ?: cs.onSurface) },
-                leadingIcon = icon?.let { ic -> { Icon(ic, null, tint = tint ?: cs.onSurfaceVariant) } },
-                onClick = { onDismiss(); onClick() },
-            )
-        }
-        Item(R.string.focus_mode, Icons.Rounded.CenterFocusStrong, onClick = onFocus)
-        Item(R.string.find_replace, Icons.Rounded.FindReplace, onClick = onFind)
-        Item(R.string.change_status, null, onClick = onStatus)
-        Item(R.string.apply_template, null, onClick = onTemplate)
-        Item(R.string.background, Icons.Rounded.Palette, onClick = onBackground)
-        Item(R.string.duplicate, Icons.Rounded.ContentCopy, onClick = onDuplicate)
-        Item(R.string.details, Icons.Rounded.Info, onClick = onDetails)
-        HorizontalDivider()
-        Item(R.string.export, Icons.Rounded.FileDownload, onClick = onExport)
-        Item(R.string.reading_mode, Icons.AutoMirrored.Rounded.MenuBook, onClick = onReading)
-        Item(R.string.version_history, Icons.Rounded.History, onClick = onVersions)
-        Item(R.string.outline, Icons.AutoMirrored.Rounded.FormatListBulleted, onClick = onOutline)
-        HorizontalDivider()
-        Item(R.string.archive, Icons.Rounded.Archive, tint = ActionColors.archive, onClick = onArchive)
-        Item(R.string.trash, Icons.Rounded.Delete, tint = ActionColors.trash, onClick = onTrash)
     }
 }

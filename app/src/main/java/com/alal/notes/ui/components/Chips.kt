@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -111,21 +112,49 @@ fun PillChip(
     dotColor: Color? = null,
 ) {
     val cs = MaterialTheme.colorScheme
-    val bg = if (selected) cs.primary else cs.surfaceContainer
+    val bg = if (selected) cs.primary else Color.Transparent
     val fg = if (selected) cs.onPrimary else cs.onSurface
     Row(
         modifier
             .clip(CircleShape)
             .background(bg)
-            .border(1.dp, if (selected) Color.Transparent else cs.outlineVariant, CircleShape)
+            .border(1.dp, if (selected) Color.Transparent else cs.outline.copy(alpha = 0.45f), CircleShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(start = if (selected) 10.dp else 16.dp, end = 16.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (dotColor != null) {
+        // Selected chips lead with a check, the Material You filter-chip pattern used in the design.
+        if (selected) {
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = fg, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+        } else if (dotColor != null) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(dotColor))
             Spacer(Modifier.width(8.dp))
         }
         Text(text, color = fg, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+    }
+}
+
+/**
+ * An icon sitting on a pale tonal tile with a squircle-ish corner radius. This is the
+ * "note type icon" container of the design system and is reused for every sheet action.
+ */
+@Composable
+fun IconTile(
+    icon: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    size: Int = 40,
+    container: Color = MaterialTheme.colorScheme.primaryContainer,
+    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+) {
+    Box(
+        modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape((size * 0.3f).dp))
+            .background(container),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription, tint = tint, modifier = Modifier.size((size * 0.55f).dp))
     }
 }
