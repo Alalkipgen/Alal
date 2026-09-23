@@ -1,4 +1,4 @@
-# Alal — အလင်း · Android note-taking for feature writers
+# Alal · Android note-taking for feature writers
 
 **Alal** is an offline-first Android notebook for journalists who write long-form pieces in
 Burmese and English. Unlimited note length, live Myanmar-aware word count and word goals,
