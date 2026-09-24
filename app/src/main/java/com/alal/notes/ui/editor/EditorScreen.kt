@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -122,6 +123,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -316,13 +319,6 @@ fun EditorScreen(
                                         context.startActivity(Intent.createChooser(send, context.getString(R.string.share)))
                                     }
                                 }) { Icon(Icons.Rounded.Share, stringResource(R.string.share)) }
-                                IconButton(onClick = { haptics.confirm(); vm.togglePin() }) {
-                                    Icon(
-                                        Icons.Rounded.PushPin,
-                                        stringResource(if (current?.isPinned == true) R.string.unpin else R.string.pin),
-                                        tint = if (current?.isPinned == true) ActionColors.pin else cs.onSurfaceVariant,
-                                    )
-                                }
                                 Box {
                                     IconButton(onClick = { overflow = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
                                     EditorOverflowMenu(
@@ -904,78 +900,78 @@ private fun EditorOverflowMenu(
     onOutline: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
-    if (!expanded) return
-    // The redesign replaces the cramped overflow dropdown with a Material You bottom sheet:
-    // four quick actions on tiles, then the full list, with Delete called out in red.
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                @Composable
-                fun Quick(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, on: Boolean, tint: Color, onClick: () -> Unit) {
-                    Column(
-                        Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { onDismiss(); onClick() }
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        IconTile(
-                            icon, null, size = 48,
-                            container = if (on) tint.copy(alpha = 0.20f) else cs.primaryContainer,
-                            tint = if (on) tint else cs.onPrimaryContainer,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(stringResource(label), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, maxLines = 1)
-                    }
-                }
-                Quick(Icons.Rounded.PushPin, if (pinned) R.string.unpin else R.string.pin, pinned, ActionColors.pin, onPin)
-                Quick(Icons.Rounded.Notifications, R.string.reminder, reminderSet, ActionColors.reminder, onReminder)
-                Quick(Icons.Rounded.Lock, if (locked) R.string.unlock else R.string.lock, locked, ActionColors.lock, onLock)
-                Quick(Icons.Rounded.Flag, R.string.word_goal, false, cs.primary, onGoal)
-            }
-            Spacer(Modifier.height(4.dp))
-            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
-
+    // A dropdown anchored to the overflow button, not a full-height sheet: the menu should sit
+    // beside the three dots it came from and leave the note visible behind it.
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        offset = DpOffset(0.dp, 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.widthIn(min = 248.dp, max = 300.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
             @Composable
-            fun Item(label: Int, icon: androidx.compose.ui.graphics.vector.ImageVector?, tint: Color? = null, onClick: () -> Unit) {
-                Row(
+            fun Quick(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, on: Boolean, tint: Color, onClick: () -> Unit) {
+                Column(
                     Modifier
-                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable { onDismiss(); onClick() }
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (icon != null) {
-                        IconTile(
-                            icon, null, size = 40,
-                            container = if (tint != null) tint.copy(alpha = 0.16f) else cs.primaryContainer,
-                            tint = tint ?: cs.onPrimaryContainer,
-                        )
-                    } else {
-                        Spacer(Modifier.size(40.dp))
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, color = tint ?: cs.onSurface)
+                    IconTile(
+                        icon, stringResource(label), size = 38,
+                        container = if (on) tint.copy(alpha = 0.20f) else cs.primaryContainer,
+                        tint = if (on) tint else cs.onPrimaryContainer,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cs.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            Item(R.string.focus_mode, Icons.Rounded.CenterFocusStrong, onClick = onFocus)
-            Item(R.string.find_replace, Icons.Rounded.FindReplace, onClick = onFind)
-            Item(R.string.change_status, Icons.Rounded.Flag, onClick = onStatus)
-            Item(R.string.apply_template, Icons.Rounded.Dashboard, onClick = onTemplate)
-            Item(R.string.background, Icons.Rounded.Palette, onClick = onBackground)
-            Item(R.string.duplicate, Icons.Rounded.ContentCopy, onClick = onDuplicate)
-            Item(R.string.details, Icons.Rounded.Info, onClick = onDetails)
-            HorizontalDivider(Modifier.padding(horizontal = 20.dp, vertical = 6.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
-            Item(R.string.export, Icons.Rounded.FileDownload, onClick = onExport)
-            Item(R.string.reading_mode, Icons.AutoMirrored.Rounded.MenuBook, onClick = onReading)
-            Item(R.string.version_history, Icons.Rounded.History, onClick = onVersions)
-            Item(R.string.outline, Icons.AutoMirrored.Rounded.FormatListBulleted, onClick = onOutline)
-            HorizontalDivider(Modifier.padding(horizontal = 20.dp, vertical = 6.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
-            Item(R.string.archive, Icons.Rounded.Archive, tint = ActionColors.archive, onClick = onArchive)
-            Item(R.string.trash, Icons.Rounded.Delete, tint = ActionColors.trash, onClick = onTrash)
+            Quick(Icons.Rounded.PushPin, if (pinned) R.string.unpin else R.string.pin, pinned, ActionColors.pin, onPin)
+            Quick(Icons.Rounded.Notifications, R.string.reminder, reminderSet, ActionColors.reminder, onReminder)
+            Quick(Icons.Rounded.Lock, if (locked) R.string.unlock else R.string.lock, locked, ActionColors.lock, onLock)
+            Quick(Icons.Rounded.Flag, R.string.word_goal, false, cs.primary, onGoal)
         }
+        HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
+
+        @Composable
+        fun Item(label: Int, icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color? = null, onClick: () -> Unit) {
+            DropdownMenuItem(
+                text = { Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, color = tint ?: cs.onSurface) },
+                leadingIcon = {
+                    IconTile(
+                        icon, null, size = 32,
+                        container = if (tint != null) tint.copy(alpha = 0.16f) else cs.primaryContainer,
+                        tint = tint ?: cs.onPrimaryContainer,
+                    )
+                },
+                onClick = { onDismiss(); onClick() },
+            )
+        }
+        Item(R.string.focus_mode, Icons.Rounded.CenterFocusStrong, onClick = onFocus)
+        Item(R.string.find_replace, Icons.Rounded.FindReplace, onClick = onFind)
+        Item(R.string.change_status, Icons.Rounded.Flag, onClick = onStatus)
+        Item(R.string.apply_template, Icons.Rounded.Dashboard, onClick = onTemplate)
+        Item(R.string.background, Icons.Rounded.Palette, onClick = onBackground)
+        Item(R.string.duplicate, Icons.Rounded.ContentCopy, onClick = onDuplicate)
+        Item(R.string.details, Icons.Rounded.Info, onClick = onDetails)
+        HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
+        Item(R.string.export, Icons.Rounded.FileDownload, onClick = onExport)
+        Item(R.string.reading_mode, Icons.AutoMirrored.Rounded.MenuBook, onClick = onReading)
+        Item(R.string.version_history, Icons.Rounded.History, onClick = onVersions)
+        Item(R.string.outline, Icons.AutoMirrored.Rounded.FormatListBulleted, onClick = onOutline)
+        HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = cs.outlineVariant.copy(alpha = 0.6f))
+        Item(R.string.archive, Icons.Rounded.Archive, tint = ActionColors.archive, onClick = onArchive)
+        Item(R.string.trash, Icons.Rounded.Delete, tint = ActionColors.trash, onClick = onTrash)
     }
 }

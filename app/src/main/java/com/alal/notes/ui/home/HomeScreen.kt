@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -200,7 +201,7 @@ fun HomeScreen(
                 )
             } else {
                 TopAppBar(
-                    title = {},
+                    title = { HomeSearchField(onSearch) },
                     actions = {
                         FilledTonalIconButton(
                             onClick = { haptics.tick(); vm.toggleDarkTheme(dark) },
@@ -275,7 +276,6 @@ fun HomeScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (!state.selecting) HomeHeader(onSearch = onSearch)
             CategoryChips(
                 categories = state.categories,
                 selected = state.categoryFilter,
@@ -293,8 +293,6 @@ fun HomeScreen(
                     listState = listState,
                     onOpen = { note -> if (state.selecting) vm.toggleSelect(note.id) else onOpenNote(note.id) },
                     onLongPress = { note -> haptics.confirm(); vm.toggleSelect(note.id) },
-                    onPin = ::togglePin,
-                    onArchive = { archiveWithUndo(setOf(it.id)) },
                 )
             }
         }
@@ -329,36 +327,29 @@ fun HomeScreen(
     }
 }
 
-/** Big "Notes" headline plus the filled search field, straight from the redesign. */
+/** Filled pill search field. It lives in the app bar row so the note grid keeps its height. */
 @Composable
-private fun HomeHeader(onSearch: () -> Unit) {
+private fun HomeSearchField(onSearch: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp)) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .clip(CircleShape)
+            .background(cs.surfaceContainerHigh)
+            .clickable(onClick = onSearch)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.Search, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
         Text(
-            stringResource(R.string.home_title),
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
-            color = cs.onBackground,
+            stringResource(R.string.search_hint),
+            color = cs.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(14.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(CircleShape)
-                .background(cs.surfaceContainerHigh)
-                .clickable(onClick = onSearch)
-                .padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Outlined.Search, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(12.dp))
-            Text(
-                stringResource(R.string.search_hint),
-                color = cs.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-            )
-        }
     }
 }
 
@@ -371,7 +362,7 @@ private fun CategoryChips(
     onAdd: () -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { PillChip(stringResource(R.string.all), selected == -1L, onClick = { onSelect(-1L) }) }
@@ -398,31 +389,22 @@ private fun NoteCollection(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onOpen: (Note) -> Unit,
     onLongPress: (Note) -> Unit,
-    onPin: (Note) -> Unit,
-    onArchive: (Note) -> Unit,
 ) {
     val categoriesById = remember(state.categories) { state.categories.associateBy { it.id } }
     val bottomPad = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp)
 
     @Composable
     fun card(note: Note) {
-        SwipeableNoteCard(
+        NoteCard(
             note = note,
-            enabled = !state.selecting,
-            onPin = { onPin(note) },
-            onArchive = { onArchive(note) },
-        ) {
-            NoteCard(
-                note = note,
-                category = note.categoryId?.let { categoriesById[it] },
-                settings = settings,
-                viewMode = settings.viewMode,
-                selected = note.id in state.selection,
-                selecting = state.selecting,
-                onClick = { onOpen(note) },
-                onLongClick = { onLongPress(note) },
-            )
-        }
+            category = note.categoryId?.let { categoriesById[it] },
+            settings = settings,
+            viewMode = settings.viewMode,
+            selected = note.id in state.selection,
+            selecting = state.selecting,
+            onClick = { onOpen(note) },
+            onLongClick = { onLongPress(note) },
+        )
     }
 
     @Composable

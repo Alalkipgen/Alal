@@ -16,14 +16,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
@@ -31,10 +29,7 @@ import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -237,63 +231,4 @@ fun NoteCard(
             }
         }
     }
-}
-
-/**
- * Wraps a card with swipe gestures: swipe right = pin/unpin (amber), swipe left = archive (purple).
- * Icons are revealed behind the card and a haptic tick fires when the threshold is crossed.
- */
-@Composable
-fun SwipeableNoteCard(
-    note: Note,
-    enabled: Boolean,
-    onPin: () -> Unit,
-    onArchive: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val haptics = rememberHaptics()
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> { haptics.confirm(); onPin() }
-                SwipeToDismissBoxValue.EndToStart -> { haptics.confirm(); onArchive() }
-                SwipeToDismissBoxValue.Settled -> Unit
-            }
-            false // always snap back; the list updates from the database
-        },
-        positionalThreshold = { total -> total * 0.35f },
-    )
-    val shape = RoundedCornerShape(20.dp)
-    SwipeToDismissBox(
-        state = state,
-        modifier = modifier,
-        enableDismissFromStartToEnd = enabled,
-        enableDismissFromEndToStart = enabled,
-        backgroundContent = {
-            val target = state.dismissDirection
-            val isPin = target == SwipeToDismissBoxValue.StartToEnd
-            val color = if (isPin) ActionColors.pin else ActionColors.archive
-            val progress = state.progress.coerceIn(0f, 1f)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .clip(shape)
-                    .background(color.copy(alpha = 0.18f + 0.25f * progress).compositeOver(MaterialTheme.colorScheme.surface))
-                    .padding(horizontal = 24.dp),
-                contentAlignment = if (isPin) Alignment.CenterStart else Alignment.CenterEnd,
-            ) {
-                if (target != SwipeToDismissBoxValue.Settled) {
-                    Icon(
-                        if (isPin) Icons.Rounded.PushPin else Icons.Rounded.Archive,
-                        contentDescription = stringResource(if (isPin) R.string.pin else R.string.archive),
-                        tint = color,
-                        modifier = Modifier.size(26.dp).scale(0.7f + 0.3f * progress),
-                    )
-                }
-            }
-        },
-        content = { content() },
-    )
 }
