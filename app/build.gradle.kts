@@ -24,7 +24,7 @@ android {
         applicationId = "com.alal.notes"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
+        versionCode = 10
         versionName = "1.3.5"
         vectorDrawables { useSupportLibrary = true }
         // Only ship the locales we translate.
