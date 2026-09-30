@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Alal Note</string>
+    <string name="app_name">Notes</string>
 
     <!-- Navigation -->
     <string name="tab_notes">Notes</string>
@@ -227,7 +227,7 @@
     <string name="about">About</string>
     <string name="version">Version</string>
     <string name="licenses">Open-source licenses</string>
-    <string name="about_body">Alal is a private, offline notebook for long-form writing in Burmese and English. No ads, no accounts, no tracking.</string>
+    <string name="about_body">Notes is a private, offline notebook for long-form writing in Burmese and English. No ads, no accounts, no tracking.</string>
     <string name="licenses_body">Jetpack Compose, Material 3, Room, Hilt, DataStore, WorkManager (Apache 2.0). Fonts: Literata, Inter, Noto Sans Myanmar (SIL Open Font License 1.1).</string>
 
     <!-- Appearance -->
@@ -275,20 +275,20 @@
 
     <!-- ===== Phase 2: Backup & Restore ===== -->
     <string name="backup_title">Backup &amp; Restore</string>
-    <string name="backup_intro">Alal never uses the internet. Backups are plain .alal files (JSON) that you keep yourself — in your Downloads folder, Google Drive, Gmail, or anywhere else you choose.</string>
+    <string name="backup_intro">Notes never uses the internet. Backups are plain .alal files (JSON) that you keep yourself — in your Downloads folder, Google Drive, Gmail, or anywhere else you choose.</string>
     <string name="backup_last">Last backup: %1$s</string>
     <string name="backup_save_file">Save backup file…</string>
     <string name="backup_share">Share backup…</string>
     <string name="backup_share_hint">Send the backup to Drive, Gmail, Telegram or any app on your phone.</string>
-    <string name="backup_share_subject">Alal notes backup</string>
+    <string name="backup_share_subject">Notes backup</string>
     <string name="backup_saved">Backup saved</string>
     <string name="backup_failed">Backup failed</string>
     <string name="auto_backup_title">Automatic backup</string>
     <string name="auto_backup_daily">Back up daily to a folder</string>
-    <string name="auto_backup_pick_hint">Pick a folder — for example a Google Drive folder — and Alal writes a fresh backup there once a day, keeping the last 7.</string>
+    <string name="auto_backup_pick_hint">Pick a folder — for example a Google Drive folder — and Notes writes a fresh backup there once a day, keeping the last 7.</string>
     <string name="auto_backup_change_folder">Change folder</string>
     <string name="auto_backup_now">Back up now</string>
-    <string name="auto_backup_hint">Runs in the background even when Alal is closed. Only the newest 7 files are kept.</string>
+    <string name="auto_backup_hint">Runs in the background even when Notes is closed. Only the newest 7 files are kept.</string>
     <string name="auto_backup_on">Automatic backup turned on</string>
     <string name="auto_backup_off">Automatic backup turned off</string>
     <string name="auto_backup_folder_lost">The backup folder is no longer accessible. Pick it again.</string>
@@ -306,7 +306,7 @@
     <string name="restore_action">Restore</string>
     <string name="restore_done">Restored</string>
     <string name="restore_failed">Restore failed</string>
-    <string name="restore_invalid_file">This is not a valid Alal backup file</string>
+    <string name="restore_invalid_file">This is not a valid Notes backup file</string>
 
     <!-- ===== Phase 2: Stats ===== -->
     <string name="stats_today">Today</string>
@@ -348,14 +348,14 @@
     <string name="lock_pin_section">PIN</string>
     <string name="lock_set_pin">Set a PIN</string>
     <string name="lock_enabled">Lock the whole app</string>
-    <string name="lock_enabled_hint">Ask for the PIN when Alal opens. Off = only locked notes ask.</string>
+    <string name="lock_enabled_hint">Ask for the PIN when Notes opens. Off = only locked notes ask.</string>
     <string name="lock_change_pin">Change PIN</string>
     <string name="lock_remove_pin">Remove PIN &amp; unlock all notes</string>
     <string name="lock_options">Options</string>
     <string name="lock_biometric">Fingerprint / face unlock</string>
     <string name="lock_biometric_hint">Use your device biometrics instead of typing the PIN.</string>
     <string name="lock_biometric_unavailable">Not available on this device</string>
-    <string name="lock_biometric_subtitle">Unlock Alal</string>
+    <string name="lock_biometric_subtitle">Unlock Notes</string>
     <string name="lock_timeout">Lock again after leaving the app</string>
     <string name="lock_timeout_immediately">Immediately</string>
     <string name="lock_timeout_seconds">%1$d seconds</string>
@@ -374,7 +374,7 @@
     <string name="pin_too_many">Too many attempts. Wait 30 seconds.</string>
 
     <!-- ===== Phase 2: Version history ===== -->
-    <string name="versions_intro">Alal keeps up to %1$d snapshots per note — one every 10 minutes of editing, or whenever a large change happens.</string>
+    <string name="versions_intro">Notes keeps up to %1$d snapshots per note — one every 10 minutes of editing, or whenever a large change happens.</string>
     <string name="versions_empty_title">No versions yet</string>
     <string name="versions_empty_body">Snapshots appear here as you keep writing. Tap + to save one now.</string>
     <string name="version_save_now">Save snapshot now</string>

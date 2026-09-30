@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **Alal** are documented here. The format follows
+All notable changes to **Notes** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses semantic versioning.
 
 ## [1.2.0] — Phase 2.1

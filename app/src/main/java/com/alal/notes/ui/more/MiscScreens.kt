@@ -213,7 +213,7 @@ fun AboutScreen(onBack: () -> Unit) {
             Text(stringResource(R.string.licenses), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.licenses_body), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                Text("Alal · Phase 1", style = MaterialTheme.typography.labelSmall, color = cs.outline)
+                Text("Notes · Phase 1", style = MaterialTheme.typography.labelSmall, color = cs.outline)
             }
         }
     }

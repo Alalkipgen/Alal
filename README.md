@@ -1,6 +1,6 @@
-# Alal · Android note-taking for feature writers
+# Notes · Android note-taking for feature writers
 
-**Alal** is an offline-first Android notebook for journalists who write long-form pieces in
+**Notes** is an offline-first Android notebook for journalists who write long-form pieces in
 Burmese and English. Unlimited note length, live Myanmar-aware word count and word goals,
 in-note Find & Replace, per-note fonts and backgrounds, and a polished native
 Jetpack Compose / Material 3 interface. No WebView, no HTML, no internet permission,
@@ -24,7 +24,7 @@ the Android SDK or Gradle on your machine.
 ```bash
 unzip alal-phase1.zip && cd alal
 git init -b main
-git add . && git commit -m "Alal v1.2.0"
+git add . && git commit -m "Notes v1.2.0"
 git remote add origin https://github.com/<you>/alal.git
 git push -u origin main
 ```
@@ -32,7 +32,7 @@ git push -u origin main
 The **Build APK** workflow (`.github/workflows/build.yml`) runs automatically on every push to
 `main`. It sets up JDK 17, the Android SDK, Gradle 8.11.1, fetches the Latin fonts, runs the
 unit tests and assembles a release APK. Download it from the workflow run → **Artifacts →
-`alal-release`**. Without a keystore the APK is signed with the debug key so it installs
+`notes-release`**. Without a keystore the APK is signed with the debug key so it installs
 immediately.
 
 ### 2. (Once) create a release keystore — no local `keytool` needed

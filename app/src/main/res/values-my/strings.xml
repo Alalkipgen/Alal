@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Alal Note</string>
+    <string name="app_name">Notes</string>
 
     <!-- Navigation -->
     <string name="tab_notes">မှတ်စုများ</string>
@@ -227,7 +227,7 @@
     <string name="about">အကြောင်း</string>
     <string name="version">ဗားရှင်း</string>
     <string name="licenses">Open-source လိုင်စင်များ</string>
-    <string name="about_body">Alal သည် မြန်မာနှင့် အင်္ဂလိပ် ဘာသာဖြင့် စာရှည် ရေးသားရန် ကိုယ်ပိုင်၊ အော့ဖ်လိုင်း မှတ်စုစာအုပ် ဖြစ်သည်။ ကြော်ငြာ မရှိ၊ အကောင့် မလို၊ ခြေရာခံခြင်း မရှိပါ။</string>
+    <string name="about_body">Notes သည် မြန်မာနှင့် အင်္ဂလိပ် ဘာသာဖြင့် စာရှည် ရေးသားရန် ကိုယ်ပိုင်၊ အော့ဖ်လိုင်း မှတ်စုစာအုပ် ဖြစ်သည်။ ကြော်ငြာ မရှိ၊ အကောင့် မလို၊ ခြေရာခံခြင်း မရှိပါ။</string>
     <string name="licenses_body">Jetpack Compose, Material 3, Room, Hilt, DataStore, WorkManager (Apache 2.0)။ ဖောင့်များ: Literata, Inter, Noto Sans Myanmar (SIL Open Font License 1.1)။</string>
 
     <!-- Appearance -->
@@ -275,20 +275,20 @@
 
     <!-- ===== Phase 2: Backup & Restore ===== -->
     <string name="backup_title">အရန်သိမ်း &amp; ပြန်ယူ</string>
-    <string name="backup_intro">Alal က အင်တာနက် လုံးဝ မသုံးပါ။ အရန်ဖိုင်များက .alal (JSON) ဖိုင်ရိုးရိုးဖြစ်ပြီး Downloads ဖိုလ်ဒါ၊ Google Drive၊ Gmail စသည့် ကြိုက်ရာနေရာမှာ ကိုယ်တိုင် သိမ်းထားနိုင်ပါတယ်။</string>
+    <string name="backup_intro">Notes က အင်တာနက် လုံးဝ မသုံးပါ။ အရန်ဖိုင်များက .alal (JSON) ဖိုင်ရိုးရိုးဖြစ်ပြီး Downloads ဖိုလ်ဒါ၊ Google Drive၊ Gmail စသည့် ကြိုက်ရာနေရာမှာ ကိုယ်တိုင် သိမ်းထားနိုင်ပါတယ်။</string>
     <string name="backup_last">နောက်ဆုံး အရန်သိမ်းချိန် — %1$s</string>
     <string name="backup_save_file">အရန်ဖိုင် သိမ်းမယ်…</string>
     <string name="backup_share">အရန်ဖိုင် ပေးပို့မယ်…</string>
     <string name="backup_share_hint">Drive၊ Gmail၊ Telegram စသည့် ဖုန်းထဲရှိ မည်သည့် app ကိုမဆို ပေးပို့နိုင်ပါတယ်။</string>
-    <string name="backup_share_subject">Alal မှတ်စု အရန်ဖိုင်</string>
+    <string name="backup_share_subject">Notes အရန်ဖိုင်</string>
     <string name="backup_saved">အရန်ဖိုင် သိမ်းပြီးပါပြီ</string>
     <string name="backup_failed">အရန်သိမ်းခြင်း မအောင်မြင်ပါ</string>
     <string name="auto_backup_title">အလိုအလျောက် အရန်သိမ်းခြင်း</string>
     <string name="auto_backup_daily">ဖိုလ်ဒါတစ်ခုသို့ နေ့စဉ် အရန်သိမ်းမယ်</string>
-    <string name="auto_backup_pick_hint">ဖိုလ်ဒါတစ်ခု (ဥပမာ Google Drive ဖိုလ်ဒါ) ရွေးပါ။ Alal က တစ်နေ့တစ်ခါ အရန်ဖိုင်အသစ် ရေးပေးပြီး နောက်ဆုံး ၇ ဖိုင်ကို သိမ်းထားပါမယ်။</string>
+    <string name="auto_backup_pick_hint">ဖိုလ်ဒါတစ်ခု (ဥပမာ Google Drive ဖိုလ်ဒါ) ရွေးပါ။ Notes က တစ်နေ့တစ်ခါ အရန်ဖိုင်အသစ် ရေးပေးပြီး နောက်ဆုံး ၇ ဖိုင်ကို သိမ်းထားပါမယ်။</string>
     <string name="auto_backup_change_folder">ဖိုလ်ဒါ ပြောင်းမယ်</string>
     <string name="auto_backup_now">အခု အရန်သိမ်းမယ်</string>
-    <string name="auto_backup_hint">Alal ပိတ်ထားချိန်မှာလည်း နောက်ကွယ်မှ အလုပ်လုပ်ပါတယ်။ နောက်ဆုံး ၇ ဖိုင်သာ ကျန်ပါမယ်။</string>
+    <string name="auto_backup_hint">Notes ပိတ်ထားချိန်မှာလည်း နောက်ကွယ်မှ အလုပ်လုပ်ပါတယ်။ နောက်ဆုံး ၇ ဖိုင်သာ ကျန်ပါမယ်။</string>
     <string name="auto_backup_on">အလိုအလျောက် အရန်သိမ်းခြင်း ဖွင့်ပြီး</string>
     <string name="auto_backup_off">အလိုအလျောက် အရန်သိမ်းခြင်း ပိတ်ပြီး</string>
     <string name="auto_backup_folder_lost">အရန်ဖိုလ်ဒါကို ဆက်သုံးခွင့် မရတော့ပါ။ ပြန်ရွေးပေးပါ။</string>
@@ -306,7 +306,7 @@
     <string name="restore_action">ပြန်ယူ</string>
     <string name="restore_done">ပြန်ယူပြီးပါပြီ</string>
     <string name="restore_failed">ပြန်ယူခြင်း မအောင်မြင်ပါ</string>
-    <string name="restore_invalid_file">ဤဖိုင်က Alal အရန်ဖိုင် မဟုတ်ပါ</string>
+    <string name="restore_invalid_file">ဤဖိုင်က Notes အရန်ဖိုင် မဟုတ်ပါ</string>
 
     <!-- ===== Phase 2: Stats ===== -->
     <string name="stats_today">ယနေ့</string>
@@ -348,14 +348,14 @@
     <string name="lock_pin_section">PIN</string>
     <string name="lock_set_pin">PIN သတ်မှတ်မယ်</string>
     <string name="lock_enabled">App တစ်ခုလုံး သော့ခတ်</string>
-    <string name="lock_enabled_hint">Alal ဖွင့်တိုင်း PIN မေးပါမယ်။ ပိတ်ထားပါက သော့ခတ်ထားသော မှတ်စုများသာ မေးပါမယ်။</string>
+    <string name="lock_enabled_hint">Notes ဖွင့်တိုင်း PIN မေးပါမယ်။ ပိတ်ထားပါက သော့ခတ်ထားသော မှတ်စုများသာ မေးပါမယ်။</string>
     <string name="lock_change_pin">PIN ပြောင်းမယ်</string>
     <string name="lock_remove_pin">PIN ဖယ်ပြီး မှတ်စုအားလုံး သော့ဖွင့်မယ်</string>
     <string name="lock_options">ရွေးချယ်စရာများ</string>
     <string name="lock_biometric">လက်ဗွေ / မျက်နှာ ဖြင့် ဖွင့်</string>
     <string name="lock_biometric_hint">PIN ရိုက်မည့်အစား ဖုန်း၏ biometrics ကို သုံးပါမယ်။</string>
     <string name="lock_biometric_unavailable">ဤစက်တွင် မရနိုင်ပါ</string>
-    <string name="lock_biometric_subtitle">Alal ကို သော့ဖွင့်ပါ</string>
+    <string name="lock_biometric_subtitle">Notes ကို သော့ဖွင့်ပါ</string>
     <string name="lock_timeout">App မှ ထွက်ပြီးနောက် ပြန်သော့ခတ်ချိန်</string>
     <string name="lock_timeout_immediately">ချက်ချင်း</string>
     <string name="lock_timeout_seconds">%1$d စက္ကန့်</string>
@@ -374,7 +374,7 @@
     <string name="pin_too_many">အကြိမ်များလွန်းပါပြီ။ ၃၀ စက္ကန့် စောင့်ပါ။</string>
 
     <!-- ===== Phase 2: Version history ===== -->
-    <string name="versions_intro">Alal က မှတ်စုတစ်ခုလျှင် snapshot %1$d ခုအထိ သိမ်းပေးပါတယ် — ရေးနေစဉ် ၁၀ မိနစ်တစ်ခါ (သို့) ကြီးကြီးမားမား ပြောင်းလဲမှုတိုင်းမှာ။</string>
+    <string name="versions_intro">Notes က မှတ်စုတစ်ခုလျှင် snapshot %1$d ခုအထိ သိမ်းပေးပါတယ် — ရေးနေစဉ် ၁၀ မိနစ်တစ်ခါ (သို့) ကြီးကြီးမားမား ပြောင်းလဲမှုတိုင်းမှာ။</string>
     <string name="versions_empty_title">ဗားရှင်း မရှိသေးပါ</string>
     <string name="versions_empty_body">ဆက်ရေးသွားရင် snapshot များ ဒီမှာ ပေါ်လာပါမယ်။ အခုသိမ်းချင်ရင် + ကို နှိပ်ပါ။</string>
     <string name="version_save_now">Snapshot အခု သိမ်းမယ်</string>
