@@ -10,11 +10,19 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// ---- Release signing: read from env (CI secrets). If absent, fall back to the
-// debug keystore so the very first CI run always produces an installable APK.
+// ---- Release signing: local builds may fall back to debug, but CI release builds
+// set REQUIRE_RELEASE_SIGNING=true and fail closed if any credential is unavailable.
 val keystorePath: String? = System.getenv("KEYSTORE_PATH")
 val keystoreFile: File? = keystorePath?.takeIf { it.isNotBlank() }?.let { file(it) }
-val hasReleaseKeystore: Boolean = keystoreFile?.exists() == true
+val keystorePassword: String? = System.getenv("KEYSTORE_PASSWORD")
+val releaseKeyAlias: String? = System.getenv("KEY_ALIAS")
+val releaseKeyPassword: String? = System.getenv("KEY_PASSWORD")
+val hasReleaseKeystore: Boolean = keystoreFile?.exists() == true &&
+    listOf(keystorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
+val requireReleaseSigning: Boolean = System.getenv("REQUIRE_RELEASE_SIGNING") == "true"
+if (requireReleaseSigning && !hasReleaseKeystore) {
+    throw GradleException("Permanent release signing credentials are required")
+}
 
 android {
     namespace = "com.alal.notes"
@@ -35,9 +43,9 @@ android {
         create("release") {
             if (hasReleaseKeystore) {
                 storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+                storePassword = keystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
