@@ -1,15 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Notebook cover. Fills the whole 108x108 canvas so the artwork
+         reaches every edge of the launcher tile, with no plate behind it. -->
     <path android:pathData="M0,0h108v108h-108z">
         <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="0" android:endY="108">
-                <item android:offset="0" android:color="#FFDDEEFD" />
-                <item android:offset="1" android:color="#FFB6D5F7" />
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="108" android:endY="108">
+                <item android:offset="0" android:color="#FF3D7DF5" />
+                <item android:offset="1" android:color="#FF2557CE" />
             </gradient>
         </aapt:attr>
     </path>
+
+    <!-- Deep navy panel beside the spine -->
+    <path android:fillColor="#FF2E3AA3" android:pathData="M33,0 L72,0 L33,74 Z" />
+
+    <!-- Spine -->
+    <path android:pathData="M0,0 L33,0 L33,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="0" android:endY="108">
+                <item android:offset="0" android:color="#FF343FA6" />
+                <item android:offset="1" android:color="#FF262F92" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Spine fold -->
+    <path android:fillColor="#FF1E2678" android:pathData="M31,0 L33,0 L33,108 L31,108 Z" />
+
+    <!-- Category tabs, bleeding off the right edge -->
+    <path android:fillColor="#FFF9BE4B" android:pathData="M82.5,30.75 L108,30.75 L108,39.75 L82.5,39.75 A4.5,4.5 0 0 1 78,35.25 A4.5,4.5 0 0 1 82.5,30.75 Z" />
+    <path android:fillColor="#FFF4705F" android:pathData="M82.5,43.25 L108,43.25 L108,52.25 L82.5,52.25 A4.5,4.5 0 0 1 78,47.75 A4.5,4.5 0 0 1 82.5,43.25 Z" />
+    <path android:fillColor="#FF8CDCA9" android:pathData="M82.5,55.75 L108,55.75 L108,64.75 L82.5,64.75 A4.5,4.5 0 0 1 78,60.25 A4.5,4.5 0 0 1 82.5,55.75 Z" />
+    <path android:fillColor="#FFC3A4F2" android:pathData="M82.5,68.25 L108,68.25 L108,77.25 L82.5,77.25 A4.5,4.5 0 0 1 78,72.75 A4.5,4.5 0 0 1 82.5,68.25 Z" />
 </vector>

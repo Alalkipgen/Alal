@@ -3,6 +3,12 @@
 All notable changes to **Notes** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses semantic versioning.
 
+## [1.3.6] — Full-bleed launcher icon
+
+### Fixed
+- Restored the full-bleed adaptive launcher icon validated by GitHub Actions run `36043603570`: the notebook cover fills the whole tile and the pale plate is removed.
+- Bumped `versionCode` to 10 and `versionName` to 1.3.6 for the replacement permanent-signed release.
+
 ## [1.2.0] — Phase 2.1
 
 ### Added
