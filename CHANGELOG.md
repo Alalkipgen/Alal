@@ -3,6 +3,23 @@
 All notable changes to **Notes** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses semantic versioning.
 
+## [1.3.7] — App lock and note safety
+
+### Fixed
+- App lock is no longer skipped on a cold start: the splash screen stays up until the stored settings load, and a new or restored process always starts locked.
+- Locking, pinning or changing other note settings in the editor is no longer undone by the next autosave.
+- Clearing all text in an existing note moves it to Trash with its version history instead of deleting it. Only an untouched new note is discarded.
+
+### Security
+- While app lock is on, Recents shows no note content and screenshots are blocked.
+- The re-lock timeout and the 30 s pause after 5 wrong PINs count time since boot, so changing the phone's clock cannot skip them.
+
+### Changed
+- A Baseline Profile is bundled and installed on first launch, so cold start, Home, the editor and Search are pre-compiled after Android's next background optimization.
+- The release workflow runs the unit tests before it builds or signs anything.
+- Removed the unused full-row note update from the database layer.
+- Bumped `versionCode` to 11 and `versionName` to 1.3.7.
+
 ## [1.3.6] — Full-bleed launcher icon
 
 ### Fixed
