@@ -83,6 +83,8 @@ app/
       di/         Hilt modules
       ui/         theme · navigation · home · editor · search · more · settings · components · util
   src/test/           WordCounterTest · FindReplaceTest · AutoTitleTest · MarkdownToggleTest
+  src/release/generated/baselineProfiles/   generated Baseline Profile (see below)
+baselineprofile/      Baseline Profile generator + cold-start Macrobenchmark (UiAutomator)
 gradle/libs.versions.toml
 scripts/fetch-fonts.sh
 ```
@@ -102,6 +104,9 @@ scripts/fetch-fonts.sh
 | DataStore | 1.1.4 |
 | WorkManager | 2.10.0 |
 | Biometric | 1.1.0 |
+| Benchmark / Baseline Profile plugin | 1.5.0 |
+| ProfileInstaller | 1.4.1 |
+| UiAutomator | 2.4.0 |
 | compileSdk / targetSdk / minSdk | 36 / 35 / 26 |
 
 ---
@@ -164,6 +169,32 @@ Editor menu → **Export**. Markdown keeps the formatting marks, plain text stri
 
 ### Internet
 The manifest declares **no** `INTERNET` permission; nothing in the app touches the network.
+
+### Baseline Profile
+`app/src/release/generated/baselineProfiles/baseline-prof.txt` lists the classes and methods
+used by cold start, scrolling Home, typing a long note and opening Search. It is compiled into
+the release APK (`assets/dexopt/baseline.prof`), and `androidx.profileinstaller` installs it on
+first launch so APKs sideloaded from GitHub releases get it too; ART then compiles it during
+the next background dex optimization (device idle and charging).
+
+The `:baselineprofile` module drives that journey with UiAutomator on a Gradle Managed Device
+(Pixel 6, API 34, `aosp` image). Regenerate after larger UI changes, on a machine or CI runner
+with emulator hardware acceleration (e.g. KVM on Linux):
+
+```
+./gradlew :app:generateBaselineProfile
+```
+
+Cold-start benchmark, without compilation vs. with the profile:
+
+```
+./gradlew :baselineprofile:pixel6Api34BenchmarkReleaseAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark
+```
+
+Results land in `baselineprofile/build/outputs/`. Emulator timings are only meaningful
+relative to each other; use a physical device (`connectedBenchmarkReleaseAndroidTest`) for
+absolute numbers.
 
 ---
 
