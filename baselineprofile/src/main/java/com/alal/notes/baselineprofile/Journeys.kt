@@ -1,5 +1,7 @@
 package com.alal.notes.baselineprofile
 
+import android.graphics.Rect
+import android.os.SystemClock
 import android.util.Log
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.platform.app.InstrumentationRegistry
@@ -17,10 +19,10 @@ val targetAppId: String
 
 // English UI strings: managed devices run in en-US and the app follows the system language.
 private const val SEARCH_NOTES = "Search notes" // Home search pill
-private const val NEW_NOTE = "New note" // Home FAB label, shown while the list is at the top
 private const val BLANK_TEMPLATE = "Blank" // Template picker row
 private const val TITLE_HINT = "Title" // Editor title placeholder, shown once the note has loaded
 private const val EDIT_TEXT = "android.widget.EditText"
+private const val BUTTON = "android.widget.Button"
 
 private const val TIMEOUT_MS = 10_000L
 private const val TAG = "AlalJourney"
@@ -110,13 +112,26 @@ fun MacrobenchmarkScope.openSearch() {
 
 /** Opens a new note from the Blank template and waits until the editor has loaded it. */
 private fun MacrobenchmarkScope.openBlankNote() {
-    waitFor(By.text(NEW_NOTE), "New note button").click()
-    waitFor(By.text(BLANK_TEMPLATE), "Blank template").click()
+    waitUntilFound("New note button") { newNoteButton() }.click()
+    // The template sheet slides up; tap its row once it has settled.
+    waitFor(By.text(BLANK_TEMPLATE), "Blank template").settled().click()
     waitFor(By.clazz(EDIT_TEXT), "note editor")
     // Text entered before the note loads is replaced by the stored (empty) note; the title
     // placeholder appears once it has loaded.
     device.wait(Until.hasObject(By.text(TITLE_HINT)), 3_000)
 }
+
+/**
+ * The Home "New note" FAB. Material 3 removes the extended FAB's label from accessibility and its
+ * icon has no description, so it is found as the app's button in the bottom-right corner.
+ */
+private fun MacrobenchmarkScope.newNoteButton(): UiObject2? =
+    device.findObjects(By.clazz(BUTTON).pkg(packageName))
+        .filter {
+            it.visibleBounds.right > device.displayWidth * 0.8 &&
+                it.visibleBounds.centerY() > device.displayHeight / 2
+        }
+        .maxByOrNull { it.visibleBounds.bottom }
 
 /** Title and body fields of the open editor, top to bottom. */
 private fun MacrobenchmarkScope.editorFields(): Pair<UiObject2, UiObject2> {
@@ -133,6 +148,27 @@ private fun MacrobenchmarkScope.homeGrid(): UiObject2? =
 
 private fun MacrobenchmarkScope.waitFor(selector: BySelector, what: String): UiObject2 =
     device.wait(Until.findObject(selector), TIMEOUT_MS) ?: fail(what)
+
+private fun <T : Any> MacrobenchmarkScope.waitUntilFound(what: String, find: () -> T?): T {
+    val deadline = SystemClock.uptimeMillis() + TIMEOUT_MS
+    while (true) {
+        find()?.let { return it }
+        if (SystemClock.uptimeMillis() > deadline) fail(what)
+        SystemClock.sleep(200)
+    }
+}
+
+/** Waits (up to 3 s) until the object stops moving, e.g. at the end of a sheet animation. */
+private fun UiObject2.settled(): UiObject2 {
+    var previous = Rect()
+    repeat(15) {
+        val bounds = visibleBounds
+        if (bounds == previous) return this
+        previous = bounds
+        SystemClock.sleep(200)
+    }
+    return this
+}
 
 private fun MacrobenchmarkScope.fail(what: String): Nothing {
     val hierarchy = ByteArrayOutputStream().also { device.dumpWindowHierarchy(it) }.toString()
