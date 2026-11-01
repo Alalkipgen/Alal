@@ -42,6 +42,10 @@ jobs:
         continue-on-error: true
         run: bash scripts/fetch-fonts.sh
 
+      # Release gate: a failing unit test stops the release before anything is built or signed.
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
       - name: Validate permanent signing secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

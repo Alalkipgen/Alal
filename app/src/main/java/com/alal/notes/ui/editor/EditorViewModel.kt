@@ -186,6 +186,12 @@ class EditorViewModel @Inject constructor(
     /** True once the note was discarded (empty on exit); blocks any late auto-save from resurrecting it. */
     private var discarded = false
 
+    /** The note had no title or body when this editor opened it (e.g. it was just created). */
+    private var openedBlank = false
+
+    /** This session has saved non-blank text into the note. */
+    private var hadContent = false
+
     private val _message = MutableStateFlow<Int?>(null)
     /** One-shot string resource id for snackbars. */
     val message: StateFlow<Int?> = _message
@@ -253,8 +259,10 @@ class EditorViewModel @Inject constructor(
         _loaded.value = false
         noteId.value = id
         loadJob = viewModelScope.launch {
-            val n = repository.getNote(id) ?: return@launch
+            val n = repository.prepareForOpen(id) ?: return@launch
             loadedNote.value = n
+            openedBlank = n.title.isBlank() && n.body.isBlank()
+            hadContent = false
             _stats.value = seedStats(n)
             _statsReady.value = true
             statsSeedBody = n.body
@@ -325,7 +333,9 @@ class EditorViewModel @Inject constructor(
             val body = bodyState.text.toString()
             lastWrittenTitle = title
             lastWrittenBody = body
-            val current = repository.getNote(base.id) ?: base
+            if (title.isNotBlank() || body.isNotBlank()) hadContent = true
+            // The stored row, not a cached copy: it is the "before" for versions and daily stats.
+            val current = repository.getNote(base.id) ?: return
             if (current.title == title && current.body == body) { clearDirtyIfUnchanged(title, body); return }
             val saved = repository.saveContent(current, title, body, method)
             loadedNote.value = saved
@@ -352,18 +362,33 @@ class EditorViewModel @Inject constructor(
     fun isEmptyNote(): Boolean = titleState.text.isBlank() && bodyState.text.isBlank()
 
     /**
-     * Called when the user leaves the editor. An empty note is deleted outright so that
-     * no "Untitled" leftovers accumulate; otherwise the note is saved.
+     * Called when the user leaves the editor. An empty note is discarded (see [discardBlankNote]);
+     * otherwise the note is saved.
      */
     fun finishEditing() {
         val base = loadedNote.value ?: return
-        if (isEmptyNote()) {
-            discarded = true
-            dirty = false
-            // Own scope: viewModelScope may be cancelled as the screen leaves the back stack.
-            GlobalScope.launch(Dispatchers.IO) { repository.deleteForever(listOf(base.id)) }
-        } else {
-            saveNow()
+        if (isEmptyNote()) discardBlankNote(base.id) else saveNow()
+    }
+
+    /**
+     * Leaves a note whose title and body are blank. Only an untouched new note - blank when
+     * opened, no text saved in this session, still blank in the database and without version
+     * history - is deleted, so no "Untitled" leftovers accumulate. Any other note was emptied by
+     * the user and goes to Trash, where it can be restored together with its versions.
+     * [finishEditing] and [onCleared] share this rule.
+     */
+    private fun discardBlankNote(id: Long) {
+        discarded = true
+        dirty = false
+        val untouchedHere = openedBlank && !hadContent
+        // Own scope: viewModelScope may be cancelled as the screen leaves the back stack.
+        GlobalScope.launch(Dispatchers.IO) {
+            val stored = repository.getNote(id) ?: return@launch
+            val untouched = untouchedHere && stored.title.isBlank() && stored.body.isBlank() && !repository.hasVersions(id)
+            when {
+                untouched -> repository.deleteForever(listOf(id))
+                !stored.isTrashed -> repository.trash(listOf(id))
+            }
         }
     }
 
@@ -491,15 +516,17 @@ class EditorViewModel @Inject constructor(
 
     // ---------------------------------------------------------------- metadata
 
-    private fun updateMeta(block: (Note) -> Note) = viewModelScope.launch {
-        val n = repository.getNote(noteId.value) ?: return@launch
-        val updated = block(n)
-        repository.updateMeta(updated)
-        loadedNote.value = loadedNote.value?.let { block(it) }
+    /**
+     * Applies one metadata change as a targeted column update. Toggles flip the stored row's
+     * value (read from the database, never the open cache), and the text is never rewritten.
+     */
+    private fun updateMeta(write: suspend (stored: Note) -> Unit) = viewModelScope.launch {
+        val stored = repository.getNote(noteId.value) ?: return@launch
+        write(stored)
     }
 
-    fun togglePin() = updateMeta { it.copy(isPinned = !it.isPinned) }
-    fun toggleLock() = updateMeta { it.copy(isLocked = !it.isLocked) }
+    fun togglePin() = updateMeta { repository.setPinned(listOf(it.id), !it.isPinned) }
+    fun toggleLock() = updateMeta { repository.setLocked(listOf(it.id), !it.isLocked) }
 
     /** Sets (or clears, with null) the reminder and (re)schedules the notification. */
     fun setReminder(at: Long?) {
@@ -527,14 +554,14 @@ class EditorViewModel @Inject constructor(
             _message.value = com.alal.notes.R.string.version_restored
         }
     }
-    fun toggleFavorite() = updateMeta { it.copy(isFavorite = !it.isFavorite) }
-    fun setStatus(status: NoteStatus) = updateMeta { it.copy(status = status) }
-    fun setCategory(id: Long?) = updateMeta { it.copy(categoryId = id) }
-    fun setWordGoal(goal: Int?) = updateMeta { it.copy(wordGoal = goal?.takeIf { g -> g > 0 }) }
-    fun setBackground(color: Int?, gradient: Int?) = updateMeta { it.copy(backgroundColor = color, backgroundGradient = gradient) }
-    fun setPaperTexture(texture: PaperTexture?) = updateMeta { it.copy(paperTexture = texture) }
-    fun setShowOnCard(show: Boolean) = updateMeta { it.copy(showBackgroundOnCard = show) }
-    fun setFontSizeOverride(size: Int?) = updateMeta { it.copy(fontSizeOverride = size?.coerceIn(14, 30)) }
+    fun toggleFavorite() = updateMeta { repository.setFavorite(listOf(it.id), !it.isFavorite) }
+    fun setStatus(status: NoteStatus) = updateMeta { repository.setStatus(listOf(it.id), status) }
+    fun setCategory(id: Long?) = updateMeta { stored -> repository.setCategory(listOf(stored.id), id) }
+    fun setWordGoal(goal: Int?) = updateMeta { repository.setWordGoal(it.id, goal?.takeIf { g -> g > 0 }) }
+    fun setBackground(color: Int?, gradient: Int?) = updateMeta { repository.setBackground(it.id, color, gradient) }
+    fun setPaperTexture(texture: PaperTexture?) = updateMeta { repository.setPaperTexture(it.id, texture) }
+    fun setShowOnCard(show: Boolean) = updateMeta { repository.setShowBackgroundOnCard(it.id, show) }
+    fun setFontSizeOverride(size: Int?) = updateMeta { repository.setFontSizeOverride(it.id, size?.coerceIn(14, 30)) }
 
     fun archive() = viewModelScope.launch { save(); repository.setArchived(listOf(noteId.value), true) }
     fun trash() = viewModelScope.launch { save(); repository.trash(listOf(noteId.value)) }
@@ -651,7 +678,7 @@ class EditorViewModel @Inject constructor(
         val base = loadedNote.value ?: return
         if (discarded) return
         if (isEmptyNote()) {
-            GlobalScope.launch(Dispatchers.IO) { repository.deleteForever(listOf(base.id)) }
+            discardBlankNote(base.id)
             return
         }
         if (!dirty) return

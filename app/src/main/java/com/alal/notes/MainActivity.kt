@@ -4,13 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.alal.notes.ui.AlalRoot
 import com.alal.notes.ui.MainViewModel
 import com.alal.notes.ui.theme.AlalTheme
@@ -22,15 +21,19 @@ class MainActivity : AppCompatActivity() {
     /** One-shot launch intent for app shortcuts; consumed by the root composable. */
     private val pendingAction = mutableStateOf<String?>(null)
 
+    private val vm: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // Hold the splash until the stored settings are known: drawing from defaults would skip
+        // the app lock and flash the default theme/language.
+        splash.setKeepOnScreenCondition { vm.settings.value == null }
         enableEdgeToEdge()
         pendingAction.value = encodeAction(intent)
 
         setContent {
-            val vm: MainViewModel = hiltViewModel()
-            val settings by vm.settings.collectAsState()
+            val settings = vm.settings.collectAsState().value ?: return@setContent
             LaunchedEffect(settings.language) { vm.applyLocale(settings.language) }
             AlalTheme(settings = settings) {
                 AlalRoot(

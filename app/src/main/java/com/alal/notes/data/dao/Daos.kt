@@ -77,6 +77,16 @@ interface NoteDao {
     )
     suspend fun searchLike(needle: String): List<Note>
 
+    /**
+     * Writes only the text columns. Lock, pin and every other flag stay as stored, so saving
+     * from an older copy of the note can never undo them. The FTS triggers re-index the row.
+     */
+    @Query(
+        "UPDATE notes SET title = :title, body = :body, wordCount = :wordCount, charCount = :charCount, " +
+            "updatedAt = :updatedAt WHERE id = :id",
+    )
+    suspend fun updateContent(id: Long, title: String, body: String, wordCount: Int, charCount: Int, updatedAt: Long)
+
     @Query("UPDATE notes SET isPinned = :pinned, updatedAt = :now WHERE id IN (:ids)")
     suspend fun setPinned(ids: List<Long>, pinned: Boolean, now: Long)
 
@@ -106,6 +116,21 @@ interface NoteDao {
 
     @Query("UPDATE notes SET categoryId = :categoryId WHERE id IN (:ids)")
     suspend fun setCategory(ids: List<Long>, categoryId: Long?)
+
+    @Query("UPDATE notes SET wordGoal = :goal WHERE id = :id")
+    suspend fun setWordGoal(id: Long, goal: Int?)
+
+    @Query("UPDATE notes SET backgroundColor = :color, backgroundGradient = :gradient WHERE id = :id")
+    suspend fun setBackground(id: Long, color: Int?, gradient: Int?)
+
+    @Query("UPDATE notes SET paperTexture = :texture WHERE id = :id")
+    suspend fun setPaperTexture(id: Long, texture: String?)
+
+    @Query("UPDATE notes SET showBackgroundOnCard = :show WHERE id = :id")
+    suspend fun setShowBackgroundOnCard(id: Long, show: Boolean)
+
+    @Query("UPDATE notes SET fontSizeOverride = :size WHERE id = :id")
+    suspend fun setFontSizeOverride(id: Long, size: Int?)
 
     // Tags
     @Query("SELECT tags.* FROM tags JOIN note_tags ON tags.id = note_tags.tagId WHERE note_tags.noteId = :noteId ORDER BY tags.name")
@@ -186,6 +211,9 @@ interface VersionDao {
 
     @Query("SELECT * FROM note_versions WHERE noteId = :noteId ORDER BY createdAt DESC LIMIT 1")
     suspend fun latestForNote(noteId: Long): NoteVersion?
+
+    @Query("SELECT EXISTS(SELECT 1 FROM note_versions WHERE noteId = :noteId)")
+    suspend fun hasAny(noteId: Long): Boolean
 
     @Query("SELECT * FROM note_versions WHERE id = :id")
     suspend fun getById(id: Long): NoteVersion?
