@@ -12,7 +12,11 @@ import com.alal.notes.data.prefs.Settings
  */
 data class LockGateState(
     val unlocked: Boolean? = null,
-    /** Wall-clock millis when the app went to the background, or 0 when it has not. */
+    /**
+     * [android.os.SystemClock.elapsedRealtime] when the app went to the background, or 0 when it
+     * has not. Time since boot keeps counting in deep sleep and ignores changes to the phone's
+     * clock, so setting the clock back cannot skip the re-lock.
+     */
     val leftAt: Long = 0L,
 ) {
     /** True while the unlock surface must cover the app. */

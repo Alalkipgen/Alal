@@ -2,6 +2,7 @@ package com.alal.notes.ui.lock
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -81,6 +82,9 @@ fun showBiometricPrompt(context: Context, title: String, subtitle: String, onSuc
 
 // ------------------------------------------------------------------ unlock surface
 
+/** How long the PIN pad pauses after 5 wrong PINs. */
+private const val PIN_PAUSE_MS = 30_000L
+
 /**
  * Full-screen PIN / biometric prompt. Used by [LockGate] (whole app) and [NoteLockOverlay] (one note).
  * Wrong attempts shake, and after 5 misses the pad pauses for 30 seconds.
@@ -115,14 +119,18 @@ fun UnlockSurface(
         if (canBio && !autoPrompted) { autoPrompted = true; bio?.invoke() }
     }
 
+    // The pause counts time since boot, so changing the phone's clock cannot end it early, and it
+    // never lasts longer than PIN_PAUSE_MS, even if a stale value is restored.
+    fun pausedForMisses(): Boolean = lockedUntil - SystemClock.elapsedRealtime() in 1L..PIN_PAUSE_MS
+
     fun submit(entered: String) {
-        if (System.currentTimeMillis() < lockedUntil) return
+        if (pausedForMisses()) return
         if (PinCrypto.matches(entered, settings.lockSalt, settings.lockPinHash)) {
             haptics.confirm(); misses = 0; onUnlocked()
         } else {
             haptics.confirm(); shake++; pin = ""; misses++
             error = R.string.pin_wrong
-            if (misses >= 5) { lockedUntil = System.currentTimeMillis() + 30_000; misses = 0; error = R.string.pin_too_many }
+            if (misses >= 5) { lockedUntil = SystemClock.elapsedRealtime() + PIN_PAUSE_MS; misses = 0; error = R.string.pin_too_many }
         }
     }
 
@@ -146,9 +154,8 @@ fun UnlockSurface(
                 onBiometric = bio,
             )
             TextButton(onClick = { submit(pin) }, enabled = pin.length >= PinCrypto.MIN_LENGTH) { Text(stringResource(R.string.unlock)) }
-            val now = System.currentTimeMillis()
             val msg = when {
-                now < lockedUntil -> stringResource(R.string.pin_too_many)
+                pausedForMisses() -> stringResource(R.string.pin_too_many)
                 error != null -> stringResource(error!!)
                 else -> ""
             }
@@ -189,11 +196,12 @@ fun LockGate(settings: Settings, content: @Composable () -> Unit) {
     val context = LocalContext.current
 
     SideEffect { gate.onSettings(settings) }
+    // Time since boot, not the phone's clock: see LockGateState.leftAt.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         val recreating = context.findActivity()?.isChangingConfigurations == true
-        gate.onStop(System.currentTimeMillis(), changingConfigurations = recreating)
+        gate.onStop(SystemClock.elapsedRealtime(), changingConfigurations = recreating)
     }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { gate.onStart(settings, System.currentTimeMillis()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { gate.onStart(settings, SystemClock.elapsedRealtime()) }
 
     if (!gate.state.isLocked(settings)) {
         content()
