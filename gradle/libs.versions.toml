@@ -26,6 +26,7 @@ serializationJson = "1.8.0"
 # --- Test ---
 junit = "4.13.2"
 icu4j = "76.1"
+robolectric = "4.14.1"        # JVM Android runtime for Room (FTS) and ViewModel tests
 androidxJunit = "1.2.1"
 espresso = "3.6.1"
 
@@ -75,6 +76,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 icu4j = { group = "com.ibm.icu", name = "icu4j", version.ref = "icu4j" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 

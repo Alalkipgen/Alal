@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -37,12 +38,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.alal.notes.R
 import com.alal.notes.data.prefs.Settings
 import com.alal.notes.ui.util.rememberHaptics
 import com.alal.notes.ui.theme.ActionColors
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 // ------------------------------------------------------------------ biometrics
 
@@ -158,33 +163,46 @@ fun UnlockSurface(
 // ------------------------------------------------------------------ app gate
 
 /**
+ * Keeps [LockGateState] for the activity. A ViewModel survives rotation and other configuration
+ * changes, but unlike rememberSaveable it is not restored after the process dies, so a cold
+ * start or a recreated process always begins locked.
+ */
+@HiltViewModel
+class LockGateViewModel @Inject constructor() : ViewModel() {
+    var state by mutableStateOf(LockGateState())
+        private set
+
+    fun onSettings(settings: Settings) { state = state.onSettings(settings) }
+    fun onStop(now: Long, changingConfigurations: Boolean) { state = state.onStop(now, changingConfigurations) }
+    fun onStart(settings: Settings, now: Long) { state = state.onStart(settings, now) }
+    fun onUnlocked() { state = state.onUnlocked() }
+}
+
+/**
  * Wraps the whole app. When app lock is enabled, content is hidden behind [UnlockSurface]
  * on cold start and again after the app has been in the background longer than `lockTimeoutSec`.
+ * [settings] must be the loaded settings, never defaults.
  */
 @Composable
 fun LockGate(settings: Settings, content: @Composable () -> Unit) {
-    val enabled = settings.lockEnabled && settings.lockPinHash.isNotBlank()
-    var unlocked by rememberSaveable { mutableStateOf(!enabled) }
-    var leftAt by rememberSaveable { mutableLongStateOf(0L) }
+    val gate: LockGateViewModel = hiltViewModel()
+    val context = LocalContext.current
 
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { leftAt = System.currentTimeMillis() }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) {
-        if (enabled && unlocked && leftAt > 0) {
-            val away = System.currentTimeMillis() - leftAt
-            if (away >= settings.lockTimeoutSec * 1000L) unlocked = false
-        }
+    SideEffect { gate.onSettings(settings) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        val recreating = context.findActivity()?.isChangingConfigurations == true
+        gate.onStop(System.currentTimeMillis(), changingConfigurations = recreating)
     }
-    // If the user disables the lock while the gate is showing, let them through.
-    LaunchedEffect(enabled) { if (!enabled) unlocked = true }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { gate.onStart(settings, System.currentTimeMillis()) }
 
-    if (unlocked || !enabled) {
+    if (!gate.state.isLocked(settings)) {
         content()
     } else {
         UnlockSurface(
             settings = settings,
             title = stringResource(R.string.app_name),
             subtitle = stringResource(R.string.lock_enter_pin),
-            onUnlocked = { unlocked = true },
+            onUnlocked = gate::onUnlocked,
         )
     }
 }

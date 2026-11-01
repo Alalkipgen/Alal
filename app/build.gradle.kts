@@ -169,6 +169,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.icu4j) // real ICU dictionary segmentation for Burmese word-count tests
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric) // in-memory Room (FTS triggers) + ViewModels on the JVM
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

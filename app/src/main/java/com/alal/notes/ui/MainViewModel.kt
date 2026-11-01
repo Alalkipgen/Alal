@@ -10,6 +10,8 @@ import com.alal.notes.data.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,8 +22,12 @@ class MainViewModel @Inject constructor(
     private val repository: NoteRepository,
 ) : ViewModel() {
 
-    val settings: StateFlow<Settings> = prefs.settings
-        .stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
+    /**
+     * Stored settings, or null until DataStore has delivered them. Nothing may render (and the
+     * lock may not be decided) from defaults, so the activity keeps the splash up while this is null.
+     */
+    val settings: StateFlow<Settings?> = prefs.settings
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     fun applyLocale(tag: String) {
         val current = AppCompatDelegate.getApplicationLocales().toLanguageTags()
@@ -38,7 +44,7 @@ class MainViewModel @Inject constructor(
 
     /** Creates an empty note (optionally from a template) and returns its id. */
     suspend fun createNote(templateBody: String = "", categoryId: Long? = null): Long =
-        repository.createNote(templateBody, categoryId, settings.value.wordCountMethod)
+        repository.createNote(templateBody, categoryId, settings.filterNotNull().first().wordCountMethod)
 
     fun setViewModePersist(block: suspend UserPreferences.() -> Unit) {
         viewModelScope.launch { prefs.block() }

@@ -14,6 +14,7 @@ import com.alal.notes.data.dao.VersionDao
 import com.alal.notes.data.db.AlalDatabase
 import com.alal.notes.data.entity.NoteTagCrossRef
 import com.alal.notes.data.prefs.UserPreferences
+import com.alal.notes.data.repository.NoteRepository
 import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ class BackupManager @Inject constructor(
     private val versionDao: VersionDao,
     private val dailyStatDao: DailyStatDao,
     private val prefs: UserPreferences,
+    private val repository: NoteRepository,
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -248,6 +250,8 @@ class BackupManager @Inject constructor(
                 if (replace) dailyStatDao.upsert(s.toEntity()) else dailyStatDao.add(s.day, s.wordsAdded, s.saves)
             }
         }
+        // A restore can rewrite any note (REPLACE reuses the old ids), so drop every warmed copy.
+        repository.clearOpenCache()
         if (applySettings && file.settings.isNotEmpty()) prefs.importAll(file.settings)
         RestoreResult(notesAdded, categoriesAdded, tagsAdded, templatesAdded)
     }

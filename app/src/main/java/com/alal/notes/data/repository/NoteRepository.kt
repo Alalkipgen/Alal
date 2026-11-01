@@ -16,6 +16,7 @@ import com.alal.notes.data.entity.NoteVersion
 import com.alal.notes.data.entity.Tag
 import com.alal.notes.data.entity.Template
 import com.alal.notes.domain.model.NoteStatus
+import com.alal.notes.domain.model.PaperTexture
 import com.alal.notes.domain.model.WordCountMethod
 import com.alal.notes.domain.wordcount.WordCounter
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,8 @@ class NoteRepository @Inject constructor(
 ) {
     // A bounded open cache: enough for the visible/recent cards, never every note body.
     // Access order makes this an LRU, and the lock keeps Home warm-up and editor reads safe.
+    // It is only a navigation warm-up for prepareForOpen: nothing that writes reads from it,
+    // and every write below evicts the rows it touched.
     private val openCacheLock = Any()
     private val openCache = object : LinkedHashMap<Long, Note>(OPEN_CACHE_SIZE, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Note>?): Boolean =
@@ -58,7 +61,21 @@ class NoteRepository @Inject constructor(
         return note
     }
 
-    /** Fetches only on an LRU miss; callers navigate after this returns. */
+    private fun evict(ids: Collection<Long>) {
+        synchronized(openCacheLock) { ids.forEach(openCache::remove) }
+    }
+
+    private fun evict(id: Long) = evict(listOf(id))
+
+    /** Forgets every warmed note, e.g. after a backup restore rewrote the notes table. */
+    fun clearOpenCache() {
+        synchronized(openCacheLock) { openCache.clear() }
+    }
+
+    /**
+     * Navigation warm-up: fetches only on an LRU miss; callers navigate after this returns.
+     * The result is for display only; never use it as the base of a write (see [getNote]).
+     */
     suspend fun prepareForOpen(id: Long): Note? {
         peekOpenCache(id)?.let { return it }
         return withContext(Dispatchers.IO) { noteDao.getById(id) }?.let(::cacheOpenNote)
@@ -81,7 +98,8 @@ class NoteRepository @Inject constructor(
     fun observeAllNoteTags(): Flow<List<NoteTagCrossRef>> = noteDao.observeAllNoteTags()
     fun observeTemplates(): Flow<List<Template>> = templateDao.observeAll()
 
-    suspend fun getNote(id: Long): Note? = prepareForOpen(id)
+    /** Always reads the stored row (never the open cache), so it is safe to base a write on. */
+    suspend fun getNote(id: Long): Note? = noteDao.getById(id)
     suspend fun getTemplate(id: Long): Template? = templateDao.getById(id)
 
     // ---- create / save ----
@@ -93,7 +111,11 @@ class NoteRepository @Inject constructor(
         )
     }
 
-    /** Saves content; recounts words off the main thread. Returns the stored note. */
+    /**
+     * Saves content; recounts words off the main thread. Only title, body, counts and updatedAt
+     * are written, so the metadata in [note] (lock, pin, status...) is ignored and an older copy
+     * cannot overwrite newer flags. Returns [note] with the new content.
+     */
     suspend fun saveContent(note: Note, title: String, body: String, method: WordCountMethod): Note = withContext(Dispatchers.Default) {
         val stats = wordCounter.count(body, method)
         val updated = note.copy(
@@ -103,8 +125,9 @@ class NoteRepository @Inject constructor(
             charCount = stats.chars,
             updatedAt = System.currentTimeMillis(),
         )
-        noteDao.update(updated)
-        cacheOpenNote(updated)
+        noteDao.updateContent(updated.id, updated.title, updated.body, updated.wordCount, updated.charCount, updated.updatedAt)
+        evict(updated.id)
+        updated
     }
 
     /**
@@ -135,21 +158,23 @@ class NoteRepository @Inject constructor(
         }
     }
 
-    suspend fun update(note: Note) = noteDao.update(note.copy(updatedAt = System.currentTimeMillis()))
-
-    /** Update metadata (pin, status, colour...) without bumping updatedAt. */
-    suspend fun updateMeta(note: Note) = noteDao.update(note)
-
-    suspend fun setPinned(ids: List<Long>, pinned: Boolean) = noteDao.setPinned(ids, pinned, System.currentTimeMillis())
-    suspend fun setFavorite(ids: List<Long>, fav: Boolean) = noteDao.setFavorite(ids, fav)
-    suspend fun setArchived(ids: List<Long>, archived: Boolean) = noteDao.setArchived(ids, archived)
-    suspend fun trash(ids: List<Long>) = noteDao.trash(ids, System.currentTimeMillis())
-    suspend fun restore(ids: List<Long>) = noteDao.restore(ids)
-    suspend fun deleteForever(ids: List<Long>) = noteDao.deleteByIds(ids)
-    suspend fun emptyTrash() = noteDao.emptyTrash()
-    suspend fun purgeTrashOlderThan(millis: Long): Int = noteDao.purgeTrashedBefore(System.currentTimeMillis() - millis)
-    suspend fun setStatus(ids: List<Long>, status: NoteStatus) = noteDao.setStatus(ids, status.name)
-    suspend fun setCategory(ids: List<Long>, categoryId: Long?) = noteDao.setCategory(ids, categoryId)
+    // Targeted column writes; each one evicts the warmed rows it touched.
+    suspend fun setPinned(ids: List<Long>, pinned: Boolean) { noteDao.setPinned(ids, pinned, System.currentTimeMillis()); evict(ids) }
+    suspend fun setFavorite(ids: List<Long>, fav: Boolean) { noteDao.setFavorite(ids, fav); evict(ids) }
+    suspend fun setArchived(ids: List<Long>, archived: Boolean) { noteDao.setArchived(ids, archived); evict(ids) }
+    suspend fun trash(ids: List<Long>) { noteDao.trash(ids, System.currentTimeMillis()); evict(ids) }
+    suspend fun restore(ids: List<Long>) { noteDao.restore(ids); evict(ids) }
+    suspend fun deleteForever(ids: List<Long>) { noteDao.deleteByIds(ids); evict(ids) }
+    suspend fun emptyTrash() { noteDao.emptyTrash(); clearOpenCache() }
+    suspend fun purgeTrashOlderThan(millis: Long): Int =
+        noteDao.purgeTrashedBefore(System.currentTimeMillis() - millis).also { if (it > 0) clearOpenCache() }
+    suspend fun setStatus(ids: List<Long>, status: NoteStatus) { noteDao.setStatus(ids, status.name); evict(ids) }
+    suspend fun setCategory(ids: List<Long>, categoryId: Long?) { noteDao.setCategory(ids, categoryId); evict(ids) }
+    suspend fun setWordGoal(id: Long, goal: Int?) { noteDao.setWordGoal(id, goal); evict(id) }
+    suspend fun setBackground(id: Long, color: Int?, gradient: Int?) { noteDao.setBackground(id, color, gradient); evict(id) }
+    suspend fun setPaperTexture(id: Long, texture: PaperTexture?) { noteDao.setPaperTexture(id, texture?.name); evict(id) }
+    suspend fun setShowBackgroundOnCard(id: Long, show: Boolean) { noteDao.setShowBackgroundOnCard(id, show); evict(id) }
+    suspend fun setFontSizeOverride(id: Long, size: Int?) { noteDao.setFontSizeOverride(id, size); evict(id) }
     suspend fun duplicate(id: Long): Long? = noteDao.duplicate(id, System.currentTimeMillis())
 
     // ---- search ----
@@ -170,7 +195,9 @@ class NoteRepository @Inject constructor(
         return categoryDao.insert(Category(name = name, color = color, icon = icon, sortOrder = count))
     }
     suspend fun updateCategory(category: Category) = categoryDao.update(category)
-    suspend fun deleteCategory(id: Long) = categoryDao.delete(id)
+
+    /** Notes in the category are set to "no category" by the foreign key, so warmed rows go stale. */
+    suspend fun deleteCategory(id: Long) { categoryDao.delete(id); clearOpenCache() }
 
     // ---- tags ----
     suspend fun addTagToNote(noteId: Long, name: String) {
@@ -187,9 +214,9 @@ class NoteRepository @Inject constructor(
     suspend fun deleteTemplate(id: Long) = templateDao.delete(id)
 
     // ---- Phase 2: lock / reminder ----
-    suspend fun setLocked(ids: List<Long>, locked: Boolean) = noteDao.setLocked(ids, locked)
-    suspend fun unlockAllNotes() = noteDao.unlockAll()
-    suspend fun setReminder(id: Long, at: Long?) = noteDao.setReminder(id, at)
+    suspend fun setLocked(ids: List<Long>, locked: Boolean) { noteDao.setLocked(ids, locked); evict(ids) }
+    suspend fun unlockAllNotes() { noteDao.unlockAll(); clearOpenCache() }
+    suspend fun setReminder(id: Long, at: Long?) { noteDao.setReminder(id, at); evict(id) }
     suspend fun notesWithReminders(): List<Note> = noteDao.getWithReminders()
 
     // ---- Phase 2: versions ----
@@ -197,6 +224,7 @@ class NoteRepository @Inject constructor(
     suspend fun getVersion(id: Long): NoteVersion? = versionDao.getById(id)
     suspend fun deleteVersion(id: Long) = versionDao.delete(id)
     suspend fun clearVersions(noteId: Long) = versionDao.deleteForNote(noteId)
+    suspend fun hasVersions(noteId: Long): Boolean = versionDao.hasAny(noteId)
 
     /** Manually snapshot the current stored text of a note (used before a restore). */
     suspend fun snapshotNow(noteId: Long) {
