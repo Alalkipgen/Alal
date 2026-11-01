@@ -2,6 +2,7 @@ package com.alal.notes
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -12,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.alal.notes.ui.AlalRoot
 import com.alal.notes.ui.MainViewModel
+import com.alal.notes.ui.lock.appLockOn
 import com.alal.notes.ui.theme.AlalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -35,6 +37,9 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val settings = vm.settings.collectAsState().value ?: return@setContent
             LaunchedEffect(settings.language) { vm.applyLocale(settings.language) }
+            // While app lock is on, Recents shows no note content and screenshots are blocked.
+            val secure = settings.appLockOn
+            LaunchedEffect(secure) { setSecureWindow(secure) }
             AlalTheme(settings = settings) {
                 AlalRoot(
                     settings = settings,
@@ -49,6 +54,11 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         pendingAction.value = encodeAction(intent)
+    }
+
+    private fun setSecureWindow(secure: Boolean) {
+        if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 
     /** Turns a launch intent into a single string the root composable can consume once. */

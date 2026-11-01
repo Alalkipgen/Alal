@@ -44,5 +44,6 @@ data class LockGateState(
     fun onUnlocked(): LockGateState = copy(unlocked = true)
 }
 
-private val Settings.appLockOn: Boolean
+/** App lock is switched on and a PIN is set. */
+internal val Settings.appLockOn: Boolean
     get() = lockEnabled && lockPinHash.isNotBlank()
